@@ -4,19 +4,28 @@
 #include <cuda.h>
 
 // MUTABLE BUFFER, abstraction to handle pairs of host and device buffers
+
+static int gBufferTotalAllocatedSize = 0;
+static int gBufferPeakAllocatedSize  = 0;
+
 typedef struct {
   unsigned char *H, *D;
   unsigned int   allocatedSize;
 } Buffer;
 
 inline Buffer bufferCreate(int size) {
+  gBufferTotalAllocatedSize += size;
+  gBufferPeakAllocatedSize = gBufferTotalAllocatedSize > gBufferPeakAllocatedSize ? gBufferTotalAllocatedSize : gBufferPeakAllocatedSize;
+
   Buffer buffer;
-  buffer.H = (unsigned char*)malloc(size);
+  buffer.allocatedSize = size;
+  buffer.H             = (unsigned char*)malloc(size);
   cudaMalloc((void**)&buffer.D, size);
   return buffer;
 }
 
 inline void bufferDestroy(Buffer* buffer) {
+  gBufferTotalAllocatedSize -= buffer->allocatedSize;
   free(buffer->H);
   cudaFree((void*)buffer->D);
 }
