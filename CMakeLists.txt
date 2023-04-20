@@ -10,12 +10,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(TGA LANGUAGES CUDA C)
 enable_language(CUDA)
 
-file(GLOB_RECURSE SRC src/*.c)
+file(GLOB_RECURSE SRC src/*.c src/*.cu)
 add_executable(tga ${SRC})
 
 # Library setup
 add_subdirectory(lib/stb)
-target_link_libraries(tga PRIVATE stb)
+target_link_libraries(tga PRIVATE stb cuda)
+target_include_directories(tga PUBLIC /opt/cuda/include/)
 
 # Cuda setup
 include(CheckLanguage)
