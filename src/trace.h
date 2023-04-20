@@ -5,6 +5,8 @@
 typedef struct {
   float3 origin;
   float3 direction;
+  float3 up;
+  float  znear;
 } Camera;
 
 //Object
@@ -41,3 +43,17 @@ typedef struct {
     } tPlain;
   };
 } Mesh;
+
+Mesh meshPlain(float3 normal) {
+  Mesh pl;
+  pl.type          = PLAIN;
+  pl.tPlain.normal = normal;
+  return pl;
+}
+
+Mesh meshSphere(float radius) {
+  Mesh m;
+  m.type           = SPHERE;
+  m.tSphere.radius = radius;
+  return m;
+}

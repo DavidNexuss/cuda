@@ -30,7 +30,13 @@ inline void bufferDestroy(Buffer* buffer) {
   cudaFree((void*)buffer->D);
 }
 
-inline void bufferUpload(Buffer* buffer) {
+inline void bufferUpload(Buffer* buffer, int amount = -1) {
+  if (amount < 0) {
+    amount = buffer->allocatedSize;
+  }
+  if (amount > buffer->allocatedSize) {
+    //TODO: Place warning
+  }
   cudaMemcpy((void*)buffer->D, (void*)buffer->H, buffer->allocatedSize, cudaMemcpyHostToDevice);
 }
 
