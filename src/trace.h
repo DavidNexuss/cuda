@@ -1,11 +1,6 @@
 #pragma once
 #include "util/linear.h"
 
-enum ObjectType {
-  PLAIN,
-  SPHERE
-};
-
 // Camera
 typedef struct {
   float3 origin;
@@ -28,9 +23,14 @@ typedef struct {
   float  ior;
 } Material;
 
-// Object
+enum MeshType {
+  PLAIN,
+  SPHERE
+};
+
+// Mesh
 typedef struct {
-  enum ObjectType type;
+  enum MeshType type;
   union {
     struct {
       float radius;

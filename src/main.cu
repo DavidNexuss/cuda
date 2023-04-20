@@ -13,13 +13,20 @@ typedef struct {
 } SceneDesc;
 
 typedef struct {
+  //Input buffer objects
   Buffer meshes;
   Buffer objects;
   Buffer materials;
+
+  //Output buffer objects
   Buffer framebuffer;
 
+  //Push constants
+  Camera camera;
+  int    objectCount;
+
+  //Scene configuration
   SceneDesc desc;
-  int       objectCount;
 
 } Scene;
 
@@ -65,8 +72,15 @@ void sceneDownload(Scene* scene) {
 }
 
 int main(int argc, char** argv) {
-  SceneDesc sceneDesc = {};
-  Scene     scene     = sceneCreate(sceneDesc);
+
+  SceneDesc sceneDesc         = {};
+  sceneDesc.maxMeshes         = 300;
+  sceneDesc.maxObjects        = 400;
+  sceneDesc.maxMaterials      = 300;
+  sceneDesc.frameBufferWidth  = 1024;
+  sceneDesc.frameBufferHeight = 1024;
+
+  Scene scene = sceneCreate(sceneDesc);
 
   {
     auto init = sceneInit(&scene, 2);
