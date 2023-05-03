@@ -3,6 +3,13 @@
 #include "util/buffer.h"
 #include "trace.h"
 
+typedef struct { 
+  dim3 skyColor;
+  dim3 orizonColor;
+  dim3 groundColor;
+} RenderingUniforms;
+
+
 /*
  This struct defines all configurable parameters for class scene
 */
@@ -14,6 +21,7 @@ typedef struct {
   int frameBufferHeight;
   int iterationCount;
   int rayDepth;
+  RenderingUniforms uniforms;
 
 } SceneDesc;
 
@@ -92,7 +100,7 @@ void sceneDownload(Scene* scene) {
 }
 
 //Execute path tracing on the scene with the given parameters
-__global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectCount, int width, int height, float* fbo, int iterationsPerThread, int maxDepth) {
+__global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectCount, int width, int height, float* fbo, int iterationsPerThread, int maxDepth, RenderingUniforms uniforms) {
   float u = blockIdx.x / float(width);
   float v = blockIdx.y / float(height);
 
@@ -129,8 +137,9 @@ void sceneRun(Scene* scene) {
   dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 1);
   int  numThreads          = scene->desc.iterationCount;
   int  iterationsPerThread = 1;
-  pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>({(Object*)scene->objects.D, (Material*)scene->materials.H, (Mesh*)scene->meshes.H},
-                                                                               scene->camera, scene->objectCount, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth);
+  pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>({(Object*)scene->objects.D, (Material*)scene->materials.D, (Mesh*)scene->meshes.D},
+                                                                               scene->camera, scene->objectCount, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 
+									       (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, scene->desc.uniforms);
 }
 
 void defaultScene(Scene* scene);
@@ -158,6 +167,7 @@ int main(int argc, char** argv) {
 
   programRun("result.hdr", 1024, 1024, defaultScene);
   programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene);
+  programRun("result3.hdr", 1024 * 4, 1024 * 4, defaultScene);
 
   dprintf(2, "[STATS] Peak memory use: %d\n", gBufferPeakAllocatedSize);
   dprintf(2, "[STATS] Memory leak : %d\n", gBufferTotalAllocatedSize);
