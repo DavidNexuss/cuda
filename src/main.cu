@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stb/stb_image_write.h>
 #include "util/buffer.h"
-#include "util/debug.h"
 #include "trace.h"
 
 /*
@@ -160,8 +159,8 @@ int main(int argc, char** argv) {
   programRun("result.hdr", 1024, 1024, defaultScene);
   programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene);
 
-  LOG("[STATS] Peak memory use: %d\n", gBufferPeakAllocatedSize);
-  LOG("[STATS] Memory leak : %d\n", gBufferTotalAllocatedSize);
+  dprintf(2, "[STATS] Peak memory use: %d\n", gBufferPeakAllocatedSize);
+  dprintf(2, "[STATS] Memory leak : %d\n", gBufferTotalAllocatedSize);
 }
 
 void defaultScene(Scene* scene) {
