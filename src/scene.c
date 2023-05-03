@@ -17,8 +17,10 @@ Scene sceneCreate(SceneDesc desc) {
 
   scene.objects = (Buffer*)malloc(sizeof(Buffer) * desc.framesInFlight);
 
+  PushConstants* cn = sceneInputHost(&scene).constants;
   for (int i = 0; i < desc.framesInFlight; i++) {
     scene.objects[i] = bufferCreate(sizeof(Object) * desc.maxObjects);
+    cn[i].objects    = (Object*)scene.objects[i].H;
   }
 
   return scene;

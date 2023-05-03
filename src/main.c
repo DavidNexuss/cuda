@@ -8,9 +8,9 @@
 
 
 void defaultScene(Scene* scene);
-int  defaultSceneLoop(Object* objects, float t);
+void defaultSceneLoop(PushConstants* cn);
 
-void programRun(const char* path, int width, int height, void(initScene)(Scene*), int(initSceneFrame)(Object*, float t)) {
+void programRun(const char* path, int width, int height, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn)) {
 
   SceneDesc sceneDesc           = {};
   sceneDesc.maxMeshes           = 300;
@@ -34,14 +34,13 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
 
   //Inits scene objects
   {
-    float   t   = 0;
-    Object* src = (Object*)scene.objects.H;
+    SceneInput sc = sceneInputHost(&scene);
+    float      t  = 0;
 
     for (int i = 0; i < sceneDesc.framesInFlight; i++) {
-      int objects = initSceneFrame((Object*)scene.objects.H, t);
-      t += sceneDesc.frameDelta;
-      scene.objectCount = objects;
-      src += objects;
+      PushConstants* constants = &sc.constants[i];
+      constants->frameTime     = t;
+      initSceneFrame(constants);
     }
 
     sceneUploadObjects(&scene);
@@ -66,6 +65,12 @@ int main(int argc, char** argv) {
 }
 #include "objects.h"
 
+Material createMaterial(Material mat) { return mat; }
+
+/**
+* Scene configuration
+**/
+
 void defaultScene(Scene* scene) {
   SceneInput inp = sceneInputHost(scene);
 
@@ -80,56 +85,57 @@ void defaultScene(Scene* scene) {
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 1));
 
   Material mat;
-  inp.materials[materialIdx++] = mat = {};
-  /*
-  {
-    .kd      = make_float3(0.5, 0.7, 0.8),
-    .ks      = make_float3(0.2, 0.4, 0.5),
-    .ka      = make_float3(0.1, 0.1, 0.1),
-    .fresnel = 0.1,
-    .ior     = 1.01}; */
+  inp.materials[materialIdx++] = materialCreate(
+    make_float3(0.5, 0.7, 0.8),
+    make_float3(0.2, 0.4, 0.5),
+    make_float3(0.1, 0.1, 0.1),
+    0.1,
+    1.01);
 
-  inp.materials[materialIdx++] = {
-    .kd      = make_float3(0.8, 0.7, 0.2),
-    .ks      = make_float3(0.2, 0.2, 0.2),
-    .ka      = make_float3(0.1, 0.1, 0.1),
-    .fresnel = 0.0,
-    .ior     = 1.01};
+  inp.materials[materialIdx++] = materialCreate(
+    make_float3(0.8, 0.7, 0.2),
+    make_float3(0.2, 0.2, 0.2),
+    make_float3(0.1, 0.1, 0.1),
+    0.0,
+    1.01);
 
-  inp.materials[materialIdx++] = {
-    .kd      = make_float3(10.8, 10.7, 10.2),
-    .ks      = make_float3(0.2, 0.2, 0.2),
-    .ka      = make_float3(0.1, 0.1, 0.1),
-    .fresnel = 0.0,
-    .ior     = 1.01};
+  inp.materials[materialIdx++] = materialCreate(
+    make_float3(10.8, 10.7, 10.2),
+    make_float3(0.2, 0.2, 0.2),
+    make_float3(0.1, 0.1, 0.1),
+    0.0,
+    1.01);
 
-  inp.materials[materialIdx++] = {
-    .kd      = make_float3(0.01, 0.1, 0.2),
-    .ks      = make_float3(0.8, 1.0, 1.0),
-    .ka      = make_float3(0.1, 0.1, 0.1),
-    .fresnel = 1.0,
-    .ior     = 1.01};
-
-  inp.objects[objectIdx++] = {.material = 0, .mesh = 1, .origin = make_float3(0, 1, 1)};
-  inp.objects[objectIdx++] = {.material = 1, .mesh = 2, .origin = make_float3(-1, 1, 1)};
-  inp.objects[objectIdx++] = {.material = 2, .mesh = 3, .origin = make_float3(-2, -1, 1)};
-  inp.objects[objectIdx++] = {.material = 1, .mesh = 0, .origin = make_float3(2, 1, 1)};
-  inp.objects[objectIdx++] = {.material = 3, .mesh = 0, .origin = make_float3(1, -1, 1)};
+  inp.materials[materialIdx++] = materialCreate(
+    make_float3(0.01, 0.1, 0.2),
+    make_float3(0.8, 1.0, 1.0),
+    make_float3(0.1, 0.1, 0.1),
+    1.0,
+    1.01);
 
   inp.textures[textureIdx++] = textureCreate("assets/soil.png");
 
-  scene->objectCount   = objectIdx;
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;
   scene->textureCount  = textureIdx;
 }
 
-int defaultSceneLoop(Object* objects, float t) {
-  int objectIdx        = 0;
-  objects[objectIdx++] = {.material = 0, .mesh = 1, .origin = make_float3(t, 1, 1)};
-  objects[objectIdx++] = {.material = 1, .mesh = 2, .origin = make_float3(-1, 1, 1)};
-  objects[objectIdx++] = {.material = 2, .mesh = 3, .origin = make_float3(-2, -1, 1)};
-  objects[objectIdx++] = {.material = 1, .mesh = 0, .origin = make_float3(2, 1, 1)};
-  objects[objectIdx++] = {.material = 3, .mesh = 0, .origin = make_float3(1, -1, 1)};
-  return objectIdx;
+void defaultSceneLoop(PushConstants* cn) {
+  cn->uniforms.skyColor    = make_float3(0.2, 0.4, 0.9);
+  cn->uniforms.groundColor = make_float3(0.2, 0.2, 0.2);
+  cn->uniforms.orizonColor = make_float3(0.7, 0.8, 0.9);
+
+  cn->camera.up        = make_float3(0, 1, 0);
+  cn->camera.znear     = 0.1f;
+  cn->camera.origin    = make_float3(0, 0, 0);
+  cn->camera.direction = make_float3(0, 0, -1);
+
+  int objectIdx            = 0;
+  cn->objects[objectIdx++] = objectCreate(0, 1, make_float3(0, 1, 1));
+  cn->objects[objectIdx++] = objectCreate(1, 2, make_float3(-1, 1, 1));
+  cn->objects[objectIdx++] = objectCreate(2, 3, make_float3(-2, -1, 1));
+  cn->objects[objectIdx++] = objectCreate(1, 0, make_float3(2, 1, 1));
+  cn->objects[objectIdx++] = objectCreate(3, 0, make_float3(1, -1, 1));
+
+  cn->objectCount = objectIdx;
 }

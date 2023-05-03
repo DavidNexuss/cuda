@@ -1,4 +1,3 @@
-
 CUDA_HOME   = /Soft/cuda/11.2.1
 
 NVCC        = $(CUDA_HOME)/bin/nvcc

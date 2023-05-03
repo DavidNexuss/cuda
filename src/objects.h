@@ -16,6 +16,8 @@ typedef struct {
   float3 origin;
 } Object;
 
+Object objectCreate(int material, int mesh, float3 origin);
+
 //Material
 typedef struct {
   float3 kd;
@@ -27,6 +29,8 @@ typedef struct {
   int    specularTexture;
   int    normalMapTexture;
 } Material;
+
+Material materialCreate(float3 kd, float3 ks, float3 ka, float fresnel, float ior);
 
 // Different mesh types
 enum MeshType {

@@ -5,9 +5,9 @@
 #include "texture.h"
 
 typedef struct {
-  dim3 skyColor;
-  dim3 orizonColor;
-  dim3 groundColor;
+  float3 skyColor;
+  float3 orizonColor;
+  float3 groundColor;
 } RenderingUniforms;
 
 /*
