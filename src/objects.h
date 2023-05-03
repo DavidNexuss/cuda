@@ -23,15 +23,16 @@ typedef struct {
   float3 ka;
   float  fresnel;
   float  ior;
-  int diffuseTexture;
-  int specularTexture;
-  int normalMapTexture;
+  int    diffuseTexture;
+  int    specularTexture;
+  int    normalMapTexture;
 } Material;
 
 // Different mesh types
 enum MeshType {
   PLAIN,
-  SPHERE
+  SPHERE,
+  MESH
 };
 
 // Mesh varidadic type union over different mesh types
@@ -45,6 +46,11 @@ typedef struct {
     struct {
       float3 normal;
     } tPlain;
+
+    struct {
+      int vertexBufferIndex;
+      int indexBufferIndex;
+    } tMesh;
   };
 } Mesh;
 

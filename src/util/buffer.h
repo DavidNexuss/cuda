@@ -6,8 +6,8 @@
 // MUTABLE BUFFER, abstraction to handle pairs of host and device buffers
 
 // For error checking and correct memory release
-static int gBufferTotalAllocatedSize = 0;
-static int gBufferPeakAllocatedSize  = 0;
+int gBufferTotalAllocatedSize = 0;
+int gBufferPeakAllocatedSize  = 0;
 
 typedef struct {
   unsigned char *H, *D;
@@ -31,7 +31,9 @@ inline void bufferDestroy(Buffer* buffer) {
   cudaFree((void*)buffer->D);
 }
 
-inline void bufferUpload(Buffer* buffer, int amount = -1) {
+
+
+inline void bufferUploadAmount(Buffer* buffer, int amount) {
   if (amount < 0) {
     amount = buffer->allocatedSize;
   }
@@ -40,6 +42,8 @@ inline void bufferUpload(Buffer* buffer, int amount = -1) {
   }
   cudaMemcpy((void*)buffer->D, (void*)buffer->H, buffer->allocatedSize, cudaMemcpyHostToDevice);
 }
+
+inline void bufferUpload(Buffer* buffer) { bufferUploadAmount(buffer, -1); }
 
 inline void bufferDownload(Buffer* buffer) {
   cudaMemcpy((void*)buffer->H, (void*)buffer->D, buffer->allocatedSize, cudaMemcpyDeviceToHost);
