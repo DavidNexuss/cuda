@@ -6,13 +6,16 @@
 
 //SCENE
 typedef struct {
-  int maxObjects;
-  int maxMaterials;
-  int maxMeshes;
-  int frameBufferWidth;
-  int frameBufferHeight;
-  int iterationCount;
-  int rayDepth;
+  int   maxObjects;
+  int   maxMaterials;
+  int   maxMeshes;
+  int   frameBufferWidth;
+  int   frameBufferHeight;
+  int   numThreads;
+  int   iterationsPerThread;
+  int   rayDepth;
+  int   framesInFlight;
+  float frameDelta;
 
 } SceneDesc;
 
@@ -48,7 +51,7 @@ Scene sceneCreate(SceneDesc desc) {
   scene.meshes      = bufferCreate(sizeof(Mesh) * desc.maxMeshes);
   scene.objects     = bufferCreate(sizeof(Object) * desc.maxObjects);
   scene.materials   = bufferCreate(sizeof(Material) * desc.maxMaterials);
-  scene.framebuffer = bufferCreate(3 * sizeof(float) * desc.frameBufferWidth * desc.frameBufferHeight);
+  scene.framebuffer = bufferCreate(3 * sizeof(float) * desc.frameBufferWidth * desc.frameBufferHeight * desc.framesInFlight);
   return scene;
 }
 
@@ -69,16 +72,27 @@ void sceneDestroy(Scene* scene) {
 
 void sceneUpload(Scene* scene) {
   bufferUpload(&scene->materials, scene->materialCount * sizeof(Material));
-  bufferUpload(&scene->objects, scene->objectCount * sizeof(Object));
   bufferUpload(&scene->meshes, scene->meshCount * sizeof(Mesh));
+}
+
+void sceneUploadObjects(Scene* scene) {
+  bufferUpload(&scene->objects, scene->objectCount * sizeof(Object) * scene->desc.framesInFlight);
 }
 
 void sceneDownload(Scene* scene) {
   bufferDownload(&scene->framebuffer);
 }
 
+float* sceneGetFrame(Scene* scene, int index) {
+  return (float*)&scene->framebuffer.H[index * 3 * sizeof(float) * scene->desc.frameBufferWidth * scene->desc.frameBufferHeight];
+}
+
+void sceneWriteFrame(Scene* scene, const char* path, int index) {
+  stbi_write_hdr(path, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 3, sceneGetFrame(scene, index));
+}
+
 //Execute path tracing on the scene with the given parameters
-__global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectCount, int width, int height, float* fbo, int iterationsPerThread, int maxDepth) {
+__global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectCount, int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth) {
   float u = blockIdx.x / float(width);
   float v = blockIdx.y / float(height);
 
@@ -87,8 +101,12 @@ __global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectC
 
   extern __shared__ float3 result[];
 
-  float3 sro = cam.origin;
-  float3 srd = make_float3(u * 2 - 1, v * 2 - 1, 1);
+  float* fbo = fbo_mat + blockIdx.z * width * height * 3;
+
+  float3  sro     = cam.origin;
+  float3  srd     = make_float3(u * 2 - 1, v * 2 - 1, 1);
+  Object* objects = sceneInput.objects + blockIdx.z * objectCount;
+
 
   //Perform path tracing using rd and ro
   /*
@@ -110,38 +128,65 @@ __global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectC
 }
 
 void sceneRun(Scene* scene) {
-  dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 1);
-  int  numThreads          = scene->desc.iterationCount;
-  int  iterationsPerThread = 1;
+  dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, scene->desc.framesInFlight);
+  int  numThreads          = scene->desc.numThreads;
+  int  iterationsPerThread = scene->desc.iterationsPerThread;
+  LOG("Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
+
   pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>({(Object*)scene->objects.D, (Material*)scene->materials.H, (Mesh*)scene->meshes.H},
                                                                                scene->camera, scene->objectCount, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth);
 }
 
 void defaultScene(Scene* scene);
-void programRun(const char* path, int width, int height, void(initSceneFunction)(Scene*)) {
+int  defaultSceneLoop(Object* objects, float t);
 
-  SceneDesc sceneDesc         = {};
-  sceneDesc.maxMeshes         = 300;
-  sceneDesc.maxObjects        = 400;
-  sceneDesc.maxMaterials      = 300;
-  sceneDesc.frameBufferWidth  = width;
-  sceneDesc.frameBufferHeight = height;
-  sceneDesc.iterationCount    = 512;
-  sceneDesc.rayDepth          = 4;
+void programRun(const char* path, int width, int height, void(initScene)(Scene*), int(initSceneFrame)(Object*, float t)) {
+
+  SceneDesc sceneDesc           = {};
+  sceneDesc.maxMeshes           = 300;
+  sceneDesc.maxObjects          = 400;
+  sceneDesc.maxMaterials        = 300;
+  sceneDesc.frameBufferWidth    = width;
+  sceneDesc.frameBufferHeight   = height;
+  sceneDesc.numThreads          = 4;
+  sceneDesc.iterationsPerThread = 4;
+  sceneDesc.rayDepth            = 4;
+  sceneDesc.framesInFlight      = 8;
+  sceneDesc.frameDelta          = 0.1;
 
   Scene scene = sceneCreate(sceneDesc);
-  initSceneFunction(&scene);
-  sceneUpload(&scene);
+
+  //Inits scene materials and meshes
+  {
+    initScene(&scene);
+    sceneUpload(&scene);
+  }
+
+  //Inits scene objects
+  {
+    float   t   = 0;
+    Object* src = (Object*)scene.objects.H;
+
+    for (int i = 0; i < sceneDesc.framesInFlight; i++) {
+      int objects = initSceneFrame((Object*)scene.objects.H, t);
+      t += sceneDesc.frameDelta;
+      scene.objectCount = objects;
+      src += objects;
+    }
+
+    sceneUploadObjects(&scene);
+  }
+
   sceneRun(&scene);
   sceneDownload(&scene);
-  stbi_write_hdr(path, width, height, 3, (const float*)scene.framebuffer.H);
+  sceneWriteFrame(&scene, path, 0);
   sceneDestroy(&scene);
 }
 
 int main(int argc, char** argv) {
 
-  programRun("result.hdr", 1024, 1024, defaultScene);
-  programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene);
+  programRun("result.hdr", 1024, 1024, defaultScene, defaultSceneLoop);
+  programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
 
   LOG("[STATS] Peak memory use: %d\n", gBufferPeakAllocatedSize);
   LOG("[STATS] Memory leak : %d\n", gBufferTotalAllocatedSize);
@@ -196,4 +241,14 @@ void defaultScene(Scene* scene) {
   scene->objectCount   = objectIdx;
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;
+}
+
+int defaultSceneLoop(Object* objects, float t) {
+  int objectIdx        = 0;
+  objects[objectIdx++] = {.material = 0, .mesh = 1, .origin = vec3(t, 1, 1)};
+  objects[objectIdx++] = {.material = 1, .mesh = 2, .origin = vec3(-1, 1, 1)};
+  objects[objectIdx++] = {.material = 2, .mesh = 3, .origin = vec3(-2, -1, 1)};
+  objects[objectIdx++] = {.material = 1, .mesh = 0, .origin = vec3(2, 1, 1)};
+  objects[objectIdx++] = {.material = 3, .mesh = 0, .origin = vec3(1, -1, 1)};
+  return objectIdx;
 }
