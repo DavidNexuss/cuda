@@ -5,6 +5,7 @@
 
 // MUTABLE BUFFER, abstraction to handle pairs of host and device buffers
 
+// For error checking and correct memory release
 static int gBufferTotalAllocatedSize = 0;
 static int gBufferPeakAllocatedSize  = 0;
 
