@@ -10,6 +10,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 project(TGA LANGUAGES CUDA C)
 enable_language(CUDA)
 
+find_package(CUDA)
+set(CMAKE_CUDA_STANDARD 14)
+
 file(GLOB_RECURSE SRC src/*.c src/*.cu)
 add_executable(tga ${SRC})
 
