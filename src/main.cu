@@ -4,7 +4,9 @@
 #include "util/debug.h"
 #include "trace.h"
 
-//SCENE
+/*
+ This struct defines all configurable parameters for class scene
+*/
 typedef struct {
   int maxObjects;
   int maxMaterials;
@@ -16,6 +18,13 @@ typedef struct {
 
 } SceneDesc;
 
+/**
+  This class holds memory and handles for:
+    - meshes
+    - objects
+    - materials
+    - the framebuffer
+*/
 typedef struct _Scene {
   //Input buffer objects
   Buffer meshes;
@@ -36,12 +45,14 @@ typedef struct _Scene {
 
 } Scene;
 
+/* bag of pointers */
 typedef struct {
   Object*   objects;
   Material* materials;
   Mesh*     meshes;
 } SceneInput;
 
+/* creates a scene using scenedesc */
 Scene sceneCreate(SceneDesc desc) {
   Scene scene;
   scene.desc        = desc;
@@ -52,6 +63,7 @@ Scene sceneCreate(SceneDesc desc) {
   return scene;
 }
 
+/* returns host bag of pointers */
 SceneInput sceneInputHost(Scene* scene) {
   scene->objectCount = 0;
   return {
@@ -60,6 +72,7 @@ SceneInput sceneInputHost(Scene* scene) {
     (Mesh*)scene->meshes.H};
 }
 
+/* destroys scene and releases memory */
 void sceneDestroy(Scene* scene) {
   bufferDestroy(&scene->meshes);
   bufferDestroy(&scene->objects);
@@ -67,12 +80,14 @@ void sceneDestroy(Scene* scene) {
   bufferDestroy(&scene->framebuffer);
 }
 
+/* uploads scene */
 void sceneUpload(Scene* scene) {
   bufferUpload(&scene->materials, scene->materialCount * sizeof(Material));
   bufferUpload(&scene->objects, scene->objectCount * sizeof(Object));
   bufferUpload(&scene->meshes, scene->meshCount * sizeof(Mesh));
 }
 
+/* downloads scene */
 void sceneDownload(Scene* scene) {
   bufferDownload(&scene->framebuffer);
 }
@@ -91,7 +106,8 @@ __global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectC
   float3 srd = make_float3(u * 2 - 1, v * 2 - 1, 1);
 
   //Perform path tracing using rd and ro
-  /*
+
+#if 0
   float3 threadResult;
   for (int i = 0; i < iterationsPerThread; i++) {
     float3 partialResult = make_float3(0, 0, 0);
@@ -101,7 +117,8 @@ __global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectC
 
     for (int d = 0; d < maxDepth; d++) {
     }
-  } */
+  }
+#endif 
 
   //Default uv gradient test
   fbo[pixelIdx]     = u;

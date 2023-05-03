@@ -25,12 +25,13 @@ typedef struct {
   float  ior;
 } Material;
 
+// Different mesh types
 enum MeshType {
   PLAIN,
   SPHERE
 };
 
-// Mesh
+// Mesh varidadic type union over different mesh types
 typedef struct {
   enum MeshType type;
   union {
