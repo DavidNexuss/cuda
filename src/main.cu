@@ -4,6 +4,23 @@
 #include "trace.h"
 
 typedef struct { 
+  int width;
+  int height;
+  int channels;
+  Buffer data;
+} Texture;
+
+
+Texture textureCreate(const char* texturePath) { 
+  Texture text;
+  void* mem = stbi_load(texturePath, &text.width, &text.height, &text.channels);
+  text.data = bufferCreate(text.width * text.height * text.channels);
+  memcpy(text.data.H, mem, text.data.allocatedSize);
+  stbi_free(mem);
+  return text;
+}
+
+typedef struct { 
   dim3 skyColor;
   dim3 orizonColor;
   dim3 groundColor;
@@ -17,6 +34,7 @@ typedef struct {
   int maxObjects;
   int maxMaterials;
   int maxMeshes;
+  int maxTextures;
   int frameBufferWidth;
   int frameBufferHeight;
   int iterationCount;
@@ -37,6 +55,7 @@ typedef struct _Scene {
   Buffer meshes;
   Buffer objects;
   Buffer materials;
+  Buffer textures;
 
   //Output buffer objects
   Buffer framebuffer;
@@ -46,6 +65,7 @@ typedef struct _Scene {
   int    objectCount   = -1;
   int    materialCount = -1;
   int    meshCount     = -1;
+  int    textureCount = -1;
 
   //Scene configuration
   SceneDesc desc;
@@ -63,6 +83,7 @@ typedef struct {
 Scene sceneCreate(SceneDesc desc) {
   Scene scene;
   scene.desc        = desc;
+  scene.textures    = bufferCreate(sizeof(Texture) * desc.maxTextures);
   scene.meshes      = bufferCreate(sizeof(Mesh) * desc.maxMeshes);
   scene.objects     = bufferCreate(sizeof(Object) * desc.maxObjects);
   scene.materials   = bufferCreate(sizeof(Material) * desc.maxMaterials);
@@ -76,7 +97,8 @@ SceneInput sceneInputHost(Scene* scene) {
   return {
     (Object*)scene->objects.H,
     (Material*)scene->materials.H,
-    (Mesh*)scene->meshes.H};
+    (Mesh*)scene->meshes.H,
+    (Texture*)scene->textures.H};
 }
 
 /* destroys scene and releases memory */
@@ -85,6 +107,11 @@ void sceneDestroy(Scene* scene) {
   bufferDestroy(&scene->objects);
   bufferDestroy(&scene->materials);
   bufferDestroy(&scene->framebuffer);
+  
+  for(int i = 0; i < scene->textureCount; i++) { 
+    bufferDestroy(&scene->textures[i].data);
+  }
+  bufferDestroy(&scene->textures);
 }
 
 /* uploads scene */
@@ -92,6 +119,11 @@ void sceneUpload(Scene* scene) {
   bufferUpload(&scene->materials, scene->materialCount * sizeof(Material));
   bufferUpload(&scene->objects, scene->objectCount * sizeof(Object));
   bufferUpload(&scene->meshes, scene->meshCount * sizeof(Mesh));
+  bufferUpload(&scene->textures, scene->texureCount * sizeof(Texture));
+
+  for(int i = 0; i < scene->textureCount; i++) { 
+    bufferUpload(&scene->textures[i].data, scene->textures[i].allocatedSize);
+  }
 }
 
 /* downloads scene */
@@ -127,17 +159,25 @@ __global__ void pathTracingKernel(SceneInput sceneInput, Camera cam, int objectC
   }
 #endif 
 
+  float3 result = 
+
+  fbo[pixelIdx]     = result.x;
+  fbo[pixelIdx + 1] = result.y;
+  fbo[pixelIdx + 2] = result.z;
+#if 0
   //Default uv gradient test
   fbo[pixelIdx]     = u;
   fbo[pixelIdx + 1] = v;
   fbo[pixelIdx + 2] = threadIdx.x / float(blockDim.x);
+#endif
 }
 
 void sceneRun(Scene* scene) {
   dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 1);
   int  numThreads          = scene->desc.iterationCount;
   int  iterationsPerThread = 1;
-  pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>({(Object*)scene->objects.D, (Material*)scene->materials.D, (Mesh*)scene->meshes.D},
+  pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>(
+									       {(Object*)scene->objects.D, (Material*)scene->materials.D, (Mesh*)scene->meshes.D},
                                                                                scene->camera, scene->objectCount, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 
 									       (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, scene->desc.uniforms);
 }
@@ -179,6 +219,7 @@ void defaultScene(Scene* scene) {
   int meshIdx     = 0;
   int materialIdx = 0;
   int objectIdx   = 0;
+  int textureIdx = 0;
 
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 0));
   inp.meshes[meshIdx++] = meshPlain(make_float3(1, 0, 0));
@@ -222,4 +263,5 @@ void defaultScene(Scene* scene) {
   scene->objectCount   = objectIdx;
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;
+scene->textureCount = textureIdx;
 }

@@ -23,6 +23,9 @@ typedef struct {
   float3 ka;
   float  fresnel;
   float  ior;
+  int diffuseTexture;
+  int specularTexture;
+  int normalMapTexture;
 } Material;
 
 // Different mesh types
