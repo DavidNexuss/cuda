@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/buffer.h"
+#include "bufferObject.h"
 #include "objects.h"
 #include "texture.h"
 

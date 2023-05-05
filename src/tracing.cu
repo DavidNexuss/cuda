@@ -6,6 +6,9 @@ extern "C" {
 
 #define HEAD __host__ __device__
 
+HEAD float dot(float3 a, float3 b) { 
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
 HEAD float3 prod(float3 a, float3 b) {
   return make_float3(a.x * b.x, a.y * b.y, a.z * b.z);
 }
@@ -20,12 +23,26 @@ HEAD float3 sum(float3 a, float3 b) {
 }
 
 //This are cuda versions of basic linear algebra functionality
-HEAD float3 lReflect(float3 rd, float3 normal);
+HEAD float3 lReflect(float3 rd, float3 normal){ 
+  float s = dot(rd, normal);
+  return make_float3(rd.x - 2 * s * normal.x, 
+                     rd.y - 2 * s * normal.y, 
+                     rd.z - 2 * s * normal.z);
+}
 HEAD float3 lRefract(float3 rd, float3 normal, float ior);
-HEAD float3 lNormalize(float3 v);
-HEAD float  lLen2(float3 a);
-HEAD float  lLen(float3 a);
+HEAD float  lLen2(float3 a) { 
+  return a.x * a.x + a.y * a.y + a.z * a.z;
+}
+HEAD float  lLen(float3 a) { 
+  return sqrt(lLen2(a));
+}
 
+HEAD float3 lNormalize(float3 v) { 
+  float len = lLen(v);
+  return make_float3(v.x / len, v.y / len, v.z / len);
+}
+
+HEAD float lRandom() {  }
 //Returns origin + direction * distance
 HEAD float3 lAdvance(float3 origin, float3 direction, float distance);
 
@@ -58,10 +75,29 @@ HEAD float3 sampleTexture(Texture* text, float2 uv) {
   return make_float3(rgb[i] / float(255.0f), rgb[i + 1] / float(255.0f), rgb[i + 2] / float(255.0f));
 }
 
+HEAD float3 sampleEnvMap(Texture* text, float3 rd) {
+  float x = atan2(rd.x, rd.z);
+  float y = atan2(rd.y, rd.x);
+  return sampleTexture(text, make_float2(x, y));
+}
+
 HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame) { 
-  float2 uv = make_float2(x / float(width), y / float(height));
-  return sampleTexture(input.textures, uv);
-  return make_float3(uv.x, uv.y, 1);
+  float2 uv = make_float2((2*y / float(height)) - 1, (2*(width - x) / float(width)) - 1);
+  float3 rd = make_float3(uv.x, uv.y, -1);
+  float3 ro = make_float3(0,0,0);
+  
+  if(rd.y > 0) { 
+    return sampleEnvMap(&input.textures[2], rd);
+  }
+
+  float floory = -1;
+  float lambda = (ro.y - floory) / rd.y;
+
+  float3 target = make_float3(ro.x + rd.x * lambda, ro.y + rd.y * lambda, ro.z + rd.z * lambda);
+
+  float3 color = sampleTexture(input.textures, make_float2(target.x, target.z));
+  
+  return sum(color, sampleEnvMap(&input.textures[2], lReflect(rd, make_float3(0,1,0))));
 }
 
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
@@ -72,7 +108,7 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
   extern __shared__ float3 sharedResults[];
   float3 partial = make_float3(0,0,0);
   for(int i = 0; i < iterationsPerThread; i++) { 
-    float3 partialResult = pathTracing(width, height,iterationsPerThread, maxDepth, input, blockIdx.x + i, blockIdx.y + threadIdx.x, blockIdx.z);
+    float3 partialResult = pathTracing(width, height,iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z);
     partial.x += partialResult.x;
     partial.y += partialResult.y;
     partial.z += partialResult.z;
@@ -81,6 +117,7 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
   sharedResults[threadIdx.x] = make_float3(partial.x / iterationsPerThread, partial.y / iterationsPerThread, partial.z / iterationsPerThread);
   __syncthreads();
 
+  //Linear reduction TODO fix this
   if(threadIdx.x == 0) { 
     float3 finalResult = make_float3(0,0,0);
     for(int i = 0; i < blockDim.x; i++) { 

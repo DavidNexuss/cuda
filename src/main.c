@@ -3,29 +3,10 @@
 #include "util/buffer.h"
 #include "objects.h"
 #include "scene.h"
+#include "examples/examples.h"
 
 
-
-void defaultScene(Scene* scene);
-void defaultSceneLoop(PushConstants* cn);
-
-void programRun(const char* path, int width, int height, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), int cpu) {
-
-  SceneDesc sceneDesc           = {};
-  sceneDesc.maxMeshes           = 300;
-  sceneDesc.maxObjects          = 400;
-  sceneDesc.maxMaterials        = 300;
-  sceneDesc.maxTextures         = 10;
-  sceneDesc.maxVertexBuffer     = 10;
-  sceneDesc.maxIndexBuffer      = 10;
-  sceneDesc.frameBufferWidth    = width;
-  sceneDesc.frameBufferHeight   = height;
-  sceneDesc.numThreads          = 8;
-  sceneDesc.iterationsPerThread = 4;
-  sceneDesc.rayDepth            = 4;
-  sceneDesc.framesInFlight      = 4;
-  sceneDesc.frameDelta          = 0.1;
-  sceneDesc.fWriteClamped       = 1;
+void programRun(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), int cpu) {
 
   Scene scene = sceneCreate(sceneDesc);
 
@@ -59,92 +40,49 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
   sceneDestroy(&scene);
 }
 
+SceneDesc defaultDesc() { 
+
+  SceneDesc sceneDesc;
+  sceneDesc.maxMeshes           = 300;
+  sceneDesc.maxObjects          = 400;
+  sceneDesc.maxMaterials        = 300;
+  sceneDesc.maxTextures         = 10;
+  sceneDesc.maxVertexBuffer     = 10;
+  sceneDesc.maxIndexBuffer      = 10;
+  sceneDesc.frameBufferWidth    = 1024;
+  sceneDesc.frameBufferHeight   = 1024;
+  sceneDesc.numThreads          = 8;
+  sceneDesc.iterationsPerThread = 4;
+  sceneDesc.rayDepth            = 4;
+  sceneDesc.framesInFlight      = 4;
+  sceneDesc.frameDelta          = 0.1;
+  sceneDesc.fWriteClamped       = 1;
+  return sceneDesc;
+}
 void test1() { 
 
-  programRun("results/result_cpu_2.png", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop, 1);
-  programRun("results/result_cpu.png", 1024, 1024, defaultScene, defaultSceneLoop, 1);
+  SceneDesc sceneDesc = defaultDesc();
 
-  programRun("results/result_gpu.png", 1024, 1024, defaultScene, defaultSceneLoop, 0);
-  programRun("results/result_gpu_2.png", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop, 0);
+  programRun(sceneDesc, "results/result_cpu.png", defaultScene, defaultSceneLoop, 1);
+  programRun(sceneDesc, "results/result_gpu.png", defaultScene, defaultSceneLoop, 0);
+
+  sceneDesc.frameBufferWidth *= 2;
+  sceneDesc.frameBufferHeight  *= 2;
+  programRun(sceneDesc, "results/result_cpu_2.png", defaultScene, defaultSceneLoop, 1);
+  programRun(sceneDesc, "results/result_gpu_2.png", defaultScene, defaultSceneLoop, 0);
+}
+
+void test2() { 
+
+  SceneDesc sceneDesc = defaultDesc();
+  sceneDesc.frameBufferWidth = 1024 * 2;
+  sceneDesc.frameBufferHeight = 1024 * 2;
+  sceneDesc.framesInFlight = 8;
+  programRun(sceneDesc, "results/result_gpu_test2.png", scene2, scene2Loop, 0); /*
+  programRun(sceneDesc, "results/result_cpu_test2.png", scene2, scene2Loop, 1); */
 }
 
 int main(int argc, char** argv) {
-  test1();
+  test2();
   bufferDebugStats();
-}
-#include "objects.h"
-
-Material createMaterial(Material mat) { return mat; }
-
-/**
-* Scene configuration
-**/
-
-void defaultScene(Scene* scene) {
-  SceneInput inp = sceneInputHost(scene);
-
-  int meshIdx     = 0;
-  int materialIdx = 0;
-  int textureIdx  = 0;
-
-  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 0, 0));
-  inp.meshes[meshIdx++] = meshPlain(make_float3(1, 0, 0));
-  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 0, 1));
-  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 1));
-
-  Material mat;
-  inp.materials[materialIdx++] = materialCreate(
-    make_float3(0.5, 0.7, 0.8),
-    make_float3(0.2, 0.4, 0.5),
-    make_float3(0.1, 0.1, 0.1),
-    0.1,
-    1.01);
-
-  inp.materials[materialIdx++] = materialCreate(
-    make_float3(0.8, 0.7, 0.2),
-    make_float3(0.2, 0.2, 0.2),
-    make_float3(0.1, 0.1, 0.1),
-    0.0,
-    1.01);
-
-  inp.materials[materialIdx++] = materialCreate(
-    make_float3(10.8, 10.7, 10.2),
-    make_float3(0.2, 0.2, 0.2),
-    make_float3(0.1, 0.1, 0.1),
-    0.0,
-    1.01);
-
-  inp.materials[materialIdx++] = materialCreate(
-    make_float3(0.01, 0.1, 0.2),
-    make_float3(0.8, 1.0, 1.0),
-    make_float3(0.1, 0.1, 0.1),
-    1.0,
-    1.01);
-
-  inp.textures[textureIdx++] = textureCreate("assets/checker.png");
-  inp.textures[textureIdx++] = textureCreate("assets/stone.jpg");
-
-  scene->materialCount = materialIdx;
-  scene->meshCount     = meshIdx;
-  scene->textureCount  = textureIdx;
-}
-
-void defaultSceneLoop(PushConstants* cn) {
-  cn->uniforms.skyColor    = make_float3(0.2, 0.4, 0.9);
-  cn->uniforms.groundColor = make_float3(0.2, 0.2, 0.2);
-  cn->uniforms.orizonColor = make_float3(0.7, 0.8, 0.9);
-
-  cn->camera.up        = make_float3(0, 1, 0);
-  cn->camera.znear     = 0.1f;
-  cn->camera.origin    = make_float3(0, 0, 0);
-  cn->camera.direction = make_float3(0, 0, -1);
-
-  int objectIdx            = 0;
-  cn->objects[objectIdx++] = objectCreate(0, 1, make_float3(0, 1, 1));
-  cn->objects[objectIdx++] = objectCreate(1, 2, make_float3(-1, 1, 1));
-  cn->objects[objectIdx++] = objectCreate(2, 3, make_float3(-2, -1, 1));
-  cn->objects[objectIdx++] = objectCreate(1, 0, make_float3(2, 1, 1));
-  cn->objects[objectIdx++] = objectCreate(3, 0, make_float3(1, -1, 1));
-
-  cn->objectCount = objectIdx;
 }

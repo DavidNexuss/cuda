@@ -11,8 +11,3 @@ typedef struct {
 
 Texture textureCreate(const char* texturePath);
 void    textureDestroy(Texture* text);
-
-typedef struct { 
-  void* data;
-  int count;
-} BufferObject;
