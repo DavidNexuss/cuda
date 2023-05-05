@@ -19,7 +19,7 @@ add_executable(tga ${SRC})
 # Library setup
 add_subdirectory(lib/stb)
 target_link_libraries(tga PRIVATE stb cuda)
-target_include_directories(tga PUBLIC /opt/cuda/include/)
+target_include_directories(tga PUBLIC /opt/cuda/include/ src)
 
 # Cuda setup
 include(CheckLanguage)
