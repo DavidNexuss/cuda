@@ -1,7 +1,7 @@
 #pragma once
 
 typedef struct {
-  unsigned char *H, *D;
+  void *H, *D;
   unsigned int   allocatedSize;
 } Buffer;
 

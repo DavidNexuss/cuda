@@ -107,3 +107,5 @@ float*     sceneGetFrame(Scene* scene, int index);
 void       sceneWriteFrame(Scene* scene, const char* path, int index);
 
 void sceneRun(Scene* scene);
+void sceneRunCPU(Scene* scene);
+void sceneRunCPUMultiThreaded(Scene* scene);

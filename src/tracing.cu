@@ -45,23 +45,70 @@ __device__ int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta, fl
 
 __device__ float3 sampleTexture(dim3* rgb, float2 uv);
 
+__host__ __device__ float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame) { 
+  float u = x / float(width);
+  float v = y / float(height);
+
+  return make_float3(u, v, 1);
+}
+
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
-  PushConstants* cn = input.constants + blockIdx.z;
-  float* fbo = fbo_mat + blockIdx.z * width * height * 3;
-
-  float u = blockIdx.x / float(width);
-  float v = blockIdx.y / float(height);
-
+  float3 result = pathTracing(width, height,iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z);
+  
   int pixelIdx = (blockIdx.x * width + blockIdx.y) * 3;
-  int thread   = threadIdx.x;
+  float* fbo = &fbo_mat[blockIdx.z * width * height * 3];
+  fbo[pixelIdx]     = result.x;
+  fbo[pixelIdx + 1] = result.y;
+  fbo[pixelIdx + 2] = result.z;
 
-  extern __shared__ float3 result[];
+}
 
-  fbo[pixelIdx]     = u;
-  fbo[pixelIdx + 1] = v;
-  fbo[pixelIdx + 2] = threadIdx.x / float(blockDim.x);
+static int jobIdCounter = 0;
+void _sceneRun(Scene* scene) { 
+  dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, scene->desc.framesInFlight);
+  dim3 numThreads          = dim3(scene->desc.numThreads, 1, 1);
+  int  iterationsPerThread = scene->desc.iterationsPerThread;
+  int jobId = jobIdCounter;
+  dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads.x, iterationsPerThread);
+  pathTracingKernel<<<numBlocks, numThreads>>> (numBlocks.x,numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene));
+  dprintf(2, "[CUDA %d ] done\n", jobId);
+  jobIdCounter++;
 
-  //Perform path tracing using rd and ro
+}
+extern "C" {
+void sceneRun(Scene* scene) {
+  _sceneRun(scene);
+}
+
+
+void sceneRunCPU(Scene *scene) { 
+  
+  int jobId = jobIdCounter;
+  int  numThreads          = scene->desc.numThreads;
+  int  iterationsPerThread = scene->desc.iterationsPerThread;
+  dprintf(2, "[CPU %d ] Running path tracing kernel in CPU iterations %d x %d \n", jobId, iterationsPerThread, numThreads);
+
+  SceneInput inp = sceneInputHost(scene);
+  for(int i =0; i < scene->desc.framesInFlight; i++) {
+    float* fbo = sceneGetFrame(scene, i);
+    for(int x = 0; x < scene->desc.frameBufferWidth; x++) { 
+      for(int y = 0; y < scene->desc.frameBufferHeight; y++) { 
+        int pixelIdx = (x* scene->desc.frameBufferWidth + y) * 3;
+        float3 result = pathTracing(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, numThreads * iterationsPerThread, scene->desc.rayDepth, inp, x, y, i);
+
+        fbo[pixelIdx]     = result.x;
+        fbo[pixelIdx + 1] = result.y;
+        fbo[pixelIdx + 2] = result.z;
+      }
+    }
+  }
+
+  dprintf(2, "[CPU %d ] Done \n", jobId);
+  jobIdCounter++;
+}
+}
+
+//Perform path tracing using rd and ro
 
 #if 0
   float3 threadResult;
@@ -83,21 +130,3 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
   fbo[pixelIdx + 2] = result.z;
 #endif
   //Default uv gradient test
-}
-
-extern "C" {
-static int jobIdCounter = 0;
-void sceneRun(Scene* scene) {
-  dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, scene->desc.framesInFlight);
-  int  numThreads          = scene->desc.numThreads;
-  int  iterationsPerThread = scene->desc.iterationsPerThread;
-  int jobId = jobIdCounter;
-  dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
-
-  pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>(
-    scene->desc.frameBufferWidth,
-    scene->desc.frameBufferHeight, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene));
-  dprintf(2, "[CUDA %d ] done\n", jobId);
-  jobIdCounter++;
-}
-}
