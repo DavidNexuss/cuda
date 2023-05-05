@@ -1,5 +1,4 @@
-CUDA_HOME    = /opt/cuda
-GCC 				 = $(CUDA_HOME)/bin/gcc
+GCC 	     = $(CUDA_HOME)/bin/gcc
 NVCC         = $(CUDA_HOME)/bin/nvcc
 INCLUDE_DIRS = -I$(CUDA_HOME)/include -I$(CUDA_HOME)/sdk/CUDALibraries/common/inc -I include -I src -I$(CUDA_HOME)/sdk/CUDALibraries/common/lib -I/opt/cuda/include
 
