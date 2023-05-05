@@ -9,7 +9,7 @@
 void defaultScene(Scene* scene);
 void defaultSceneLoop(PushConstants* cn);
 
-void programRun(const char* path, int width, int height, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn)) {
+void programRun(const char* path, int width, int height, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), int cpu) {
 
   SceneDesc sceneDesc           = {};
   sceneDesc.maxMeshes           = 300;
@@ -49,8 +49,12 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
     sceneUploadObjects(&scene);
   }
 
-  sceneRun(&scene);
-  sceneDownload(&scene);
+  if(cpu) { 
+    sceneRunCPU(&scene);
+  } else {
+    sceneRun(&scene);
+    sceneDownload(&scene);
+  }
   for(int i = 0; i < sceneDesc.framesInFlight; i++) { 
     sceneWriteFrame(&scene, path, i);
   }
@@ -59,7 +63,7 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
 
 int main(int argc, char** argv) {
 
-  programRun("result.png", 1024, 1024, defaultScene, defaultSceneLoop);
+  programRun("result.png", 1024, 1024, defaultScene, defaultSceneLoop, 1);
 /*
   programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
   programRun("result.hdr", 1024, 1024, defaultScene, defaultSceneLoop);

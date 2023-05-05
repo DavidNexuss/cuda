@@ -35,12 +35,18 @@ void bufferDestroy(Buffer* buffer) {
 
 void bufferDestroyImmutable(void* buffer) { cudaFree(buffer); }
 
+#include <stdio.h>
 void bufferUploadAmount(Buffer* buffer, int amount) {
+  if(amount < -1) { 
+    dprintf(2, "Probably doing somehting wrong");
+    exit(1);
+  }
   if (amount < 0) {
     amount = buffer->allocatedSize;
   }
   if (amount > buffer->allocatedSize) {
-    //TODO: Place warning
+    dprintf(2, "Too much memory to upload");
+    exit(1);
   }
   cudaMemcpy((void*)buffer->D, (void*)buffer->H, buffer->allocatedSize, cudaMemcpyHostToDevice);
 }
@@ -51,7 +57,6 @@ void bufferDownload(Buffer* buffer) {
   cudaMemcpy((void*)buffer->H, (void*)buffer->D, buffer->allocatedSize, cudaMemcpyDeviceToHost);
 }
 
-#include <stdio.h>
 void bufferDebugStats() {
   dprintf(2, "[STATS] Peak memory use: %d\n", gBufferPeakAllocatedSize);
   dprintf(2, "[STATS] Memory leak : %d\n", gBufferTotalAllocatedSize);

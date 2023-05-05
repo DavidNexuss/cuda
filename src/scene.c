@@ -132,19 +132,20 @@ void sceneWriteFrame(Scene* scene, const char* path, int index) {
   dprintf(2, "[IO] Writing frame [%d] for scene to %s\n", index, path);
   if(scene->desc.fWriteClamped) { 
     
-    int top = scene->desc.frameBufferWidth * scene->desc.frameBufferHeight * 3;
+    int count = scene->desc.frameBufferWidth * scene->desc.frameBufferHeight * 3;
     float* fbo = sceneGetFrame(scene, index);
-    unsigned char* png = (unsigned char*)malloc(top);
+    unsigned char* png = (unsigned char*)malloc(count);
 
     float maxValue = 0.0f;
     float minValue = 10000000.0f;
-    for(int i = 0; i < top; i++) { 
+    for(int i = 0; i < count; i++) { 
       if(fbo[i] > maxValue) maxValue = fbo[i];
       if(fbo[i] < minValue) minValue = fbo[i];
     }
     
+    dprintf(2, "Max and min values %f %f\n", maxValue, minValue);
     if((maxValue - minValue) < 0.01) { maxValue += 0.2; }
-    for(int i = 0; i < top; i++) { 
+    for(int i = 0; i < count; i++) { 
       png[i] = ((fbo[i] - minValue)/ (maxValue - minValue)) * 0xff;
     }
     
