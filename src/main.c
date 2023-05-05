@@ -20,7 +20,7 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
   sceneDesc.maxIndexBuffer      = 10;
   sceneDesc.frameBufferWidth    = width;
   sceneDesc.frameBufferHeight   = height;
-  sceneDesc.numThreads          = 4;
+  sceneDesc.numThreads          = 8;
   sceneDesc.iterationsPerThread = 4;
   sceneDesc.rayDepth            = 4;
   sceneDesc.framesInFlight      = 1;
@@ -63,7 +63,8 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
 
 int main(int argc, char** argv) {
 
-  programRun("result.png", 1024, 1024, defaultScene, defaultSceneLoop, 1);
+  programRun("results/result_cpu.png", 1024, 1024, defaultScene, defaultSceneLoop, 1);
+  programRun("results/result_gpu.png", 1024, 1024, defaultScene, defaultSceneLoop, 0);
 /*
   programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
   programRun("result.hdr", 1024, 1024, defaultScene, defaultSceneLoop);

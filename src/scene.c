@@ -58,7 +58,7 @@ void sceneDestroy(Scene* scene) {
   bufferDestroy(&scene->framebuffer);
 
   for (int i = 0; i < scene->textureCount; i++) {
-    textureDestroy((Texture*)&scene->textures.H[i]);
+    textureDestroy(&((Texture*)scene->textures.H)[i]);
   }
   bufferDestroy(&scene->textures);
 
@@ -124,7 +124,8 @@ void sceneDownload(Scene* scene) {
 }
 
 float* sceneGetFrame(Scene* scene, int index) {
-  return (float*)&scene->framebuffer.H[index * 3 * sizeof(float) * scene->desc.frameBufferWidth * scene->desc.frameBufferHeight];
+  float* fbo = (float*)scene->framebuffer.H;
+  return &fbo[index * 3 * scene->desc.frameBufferWidth * scene->desc.frameBufferHeight];
 }
 
 #include <stdio.h>

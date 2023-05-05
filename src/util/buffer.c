@@ -2,6 +2,7 @@
 #include <cuda_runtime_api.h>
 #include <cuda_runtime.h>
 #include <cuda.h>
+#include <stdio.h>
 
 // MUTABLE BUFFER, abstraction to handle pairs of host and device buffers
 
@@ -24,18 +25,28 @@ void* bufferCreateImmutable(void* data, int size) {
   void* buffer;
   cudaMalloc((void**)&buffer, size);
   cudaMemcpy((void*)buffer, data, size, cudaMemcpyHostToDevice);
+  dprintf(2, "Create immutable %p\n", buffer);
   return buffer;
 }
 
 void bufferDestroy(Buffer* buffer) {
   gBufferTotalAllocatedSize -= buffer->allocatedSize;
   if (buffer->H != 0) free(buffer->H);
-  if (buffer->D != 0) cudaFree((void*)buffer->D);
+  if (buffer->D != 0) { 
+    if(cudaFree((void*)buffer->D) != cudaSuccess) { 
+      dprintf(2, "Cuda free error %p!\n", buffer);
+      exit(1);
+    }
+  }
 }
 
-void bufferDestroyImmutable(void* buffer) { cudaFree(buffer); }
+void bufferDestroyImmutable(void* buffer) { 
+  if(cudaFree(buffer) != cudaSuccess){ 
+    dprintf(2, "Cuda free error %p!\n", buffer);
+    exit(1);
+  }
+}
 
-#include <stdio.h>
 void bufferUploadAmount(Buffer* buffer, int amount) {
   if(amount < -1) { 
     dprintf(2, "Probably doing somehting wrong");
@@ -48,12 +59,17 @@ void bufferUploadAmount(Buffer* buffer, int amount) {
     dprintf(2, "Too much memory to upload");
     exit(1);
   }
+
+  dprintf(2, " ----> uploading %p %d\n", buffer, amount);
   cudaMemcpy((void*)buffer->D, (void*)buffer->H, buffer->allocatedSize, cudaMemcpyHostToDevice);
 }
 
-void bufferUpload(Buffer* buffer) { bufferUploadAmount(buffer, -1); }
+void bufferUpload(Buffer* buffer) { 
+  bufferUploadAmount(buffer, -1); 
+}
 
 void bufferDownload(Buffer* buffer) {
+  dprintf(2, " <----- downloading %p %d\n", buffer, buffer->allocatedSize);
   cudaMemcpy((void*)buffer->H, (void*)buffer->D, buffer->allocatedSize, cudaMemcpyDeviceToHost);
 }
 
