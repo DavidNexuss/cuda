@@ -65,13 +65,33 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 }
 
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
-  float3 result = pathTracing(width, height,iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z);
   
   int pixelIdx = (blockIdx.x * width + blockIdx.y) * 3;
   float* fbo = &fbo_mat[blockIdx.z * width * height * 3];
-  fbo[pixelIdx]     = result.x;
-  fbo[pixelIdx + 1] = result.y;
-  fbo[pixelIdx + 2] = result.z;
+
+  extern __shared__ float3 sharedResults[];
+  float3 partial = make_float3(0,0,0);
+  for(int i = 0; i < iterationsPerThread; i++) { 
+    float3 partialResult = pathTracing(width, height,iterationsPerThread, maxDepth, input, blockIdx.x + i, blockIdx.y + threadIdx.x, blockIdx.z);
+    partial.x += partialResult.x;
+    partial.y += partialResult.y;
+    partial.z += partialResult.z;
+  }
+
+  sharedResults[threadIdx.x] = make_float3(partial.x / iterationsPerThread, partial.y / iterationsPerThread, partial.z / iterationsPerThread);
+  __syncthreads();
+
+  if(threadIdx.x == 0) { 
+    float3 finalResult = make_float3(0,0,0);
+    for(int i = 0; i < blockDim.x; i++) { 
+      finalResult.x += sharedResults[i].x;
+      finalResult.y += sharedResults[i].y;
+      finalResult.z += sharedResults[i].z;
+    }
+    fbo[pixelIdx]     = finalResult.x;
+    fbo[pixelIdx + 1] = finalResult.y;
+    fbo[pixelIdx + 2] = finalResult.z;
+  }
 
 }
 
@@ -82,7 +102,7 @@ void _sceneRun(Scene* scene) {
   int  iterationsPerThread = scene->desc.iterationsPerThread;
   int jobId = jobIdCounter;
   dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads.x, iterationsPerThread);
-  pathTracingKernel<<<numBlocks, numThreads>>> (numBlocks.x,numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene));
+  pathTracingKernel<<<numBlocks, numThreads, sizeof(float3) * numThreads.x>>> (numBlocks.x,numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene));
   dprintf(2, "[CUDA %d ] done\n", jobId);
   jobIdCounter++;
 
