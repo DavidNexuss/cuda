@@ -142,7 +142,7 @@ BinPackParameters: false
 BreakBeforeBraces: Custom
 
 BraceWrapping:
-  AfterCaseLabel: false
+  AfterCaseLabel: true
   # true:
   # case 1
   # {
@@ -151,14 +151,14 @@ BraceWrapping:
   # }
 
 
-  AfterClass: false
+  AfterClass: true
   # true:
   # class A
   # {
 
 
   # Only wrap braces after a multi-line control statement.
-  AfterControlStatement: Never
+  AfterControlStatement: Always
   # MultiLine:
   # if (foo && bar)
   # {
@@ -168,7 +168,7 @@ BraceWrapping:
   # {}    
 
 
-  AfterEnum: false
+  AfterEnum: true
   # true:
   # enum X : int
   # {
@@ -176,7 +176,7 @@ BraceWrapping:
   # };
 
 
-  AfterFunction: false
+  AfterFunction: true
   # void foo()
   # {
   #     bar();
@@ -184,7 +184,7 @@ BraceWrapping:
   # }
 
 
-  AfterNamespace: false
+  AfterNamespace: true
   # true:
   # namespace
   # {
@@ -193,10 +193,10 @@ BraceWrapping:
 
   # Wrap ObjC definitions (interfaces, implementations...). @autoreleasepool and @synchronized
   # blocks are wrapped according to AfterControlStatement flag.
-  AfterObjCDeclaration: false
+  AfterObjCDeclaration: true
 
 
-  AfterStruct: false
+  AfterStruct: true
   # true:
   # struct foo
   # {
@@ -204,7 +204,7 @@ BraceWrapping:
   # };
 
 
-  AfterUnion: false
+  AfterUnion: true
   # true:
   # union foo
   # {
@@ -212,7 +212,7 @@ BraceWrapping:
   # }
 
 
-  AfterExternBlock: false
+  AfterExternBlock: true
   # true:
   # extern "C"
   # {
@@ -220,13 +220,13 @@ BraceWrapping:
   # }
 
 
-  BeforeCatch: false
+  BeforeCatch: true
   # true:
   # }
   # catch ()
   
 
-  BeforeElse: false
+  BeforeElse: true
   # true:
   # }
   # else
@@ -297,8 +297,8 @@ CompactNamespaces: false
 # If the constructor initializers don't fit on a line, put each initializer on its own line.
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 
-ConstructorInitializerIndentWidth: 2
-ContinuationIndentWidth: 2
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
 
 # If true, format braced lists as best suited for C++11 braced lists.
 Cpp11BracedListStyle: true
@@ -345,7 +345,7 @@ IndentPPDirectives: AfterHash
 # #endif
 
 
-IndentWidth:     2
+IndentWidth:     4
 IndentWrappedFunctionNames: false
 JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
@@ -362,7 +362,7 @@ MaxEmptyLinesToKeep: 10000
 NamespaceIndentation: None
 
 ObjCBinPackProtocolList: Auto
-ObjCBlockIndentWidth: 2
+ObjCBlockIndentWidth: 4
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
 PenaltyBreakAssignment: 2
@@ -474,6 +474,6 @@ Standard:        Latest
 StatementMacros:
   - Q_UNUSED
   - QT_REQUIRE_VERSION
-TabWidth:        2
+TabWidth:        4
 UseTab:          Never
 ...
