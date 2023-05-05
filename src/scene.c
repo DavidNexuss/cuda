@@ -14,6 +14,8 @@ Scene sceneCreate(SceneDesc desc) {
   scene.materialCount = -1;
   scene.textureCount  = -1;
   scene.meshCount     = -1;
+  scene.indexBufferCount = -1;
+  scene.vertexBufferCount = -1;
 
   scene.objects = (Buffer*)malloc(sizeof(Buffer) * desc.framesInFlight);
 
@@ -64,6 +66,7 @@ void sceneDestroy(Scene* scene) {
     bufferDestroy(&scene->objects[i]);
   }
 
+  bufferDestroy(&scene->constants);
   free(scene->objects);
 
   //Late

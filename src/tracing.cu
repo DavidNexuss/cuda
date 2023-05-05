@@ -1,5 +1,8 @@
-#include "tracing.h"
 #include <stdio.h>
+
+extern "C" {
+#include "scene.h"
+}
 
 __device__ float3 prod(float3 a, float3 b) {
   return make_float3(a.x * b.x, a.y * b.y, a.z * b.z);
@@ -81,7 +84,7 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
   fbo[pixelIdx + 1] = result.y;
   fbo[pixelIdx + 2] = result.z;
 #endif
-#if 0
+#if 1
   //Default uv gradient test
   fbo[pixelIdx]     = u;
   fbo[pixelIdx + 1] = v;
@@ -89,13 +92,19 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
 #endif
 }
 
+extern "C" {
+static int jobIdCounter = 0;
 void sceneRun(Scene* scene) {
   dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, scene->desc.framesInFlight);
   int  numThreads          = scene->desc.numThreads;
   int  iterationsPerThread = scene->desc.iterationsPerThread;
-  dprintf(2, "Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
+  int jobId = jobIdCounter;
+  dprintf(2, "[%d] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
 
   pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>(
     scene->desc.frameBufferWidth,
     scene->desc.frameBufferHeight, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene));
+  dprintf(2, "[%d] done\n", jobId);
+  jobIdCounter++;
+}
 }

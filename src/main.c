@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stb/stb_image_write.h>
 #include "texture.h"
 #include "util/buffer.h"
 #include "objects.h"
@@ -112,7 +111,7 @@ void defaultScene(Scene* scene) {
     1.0,
     1.01);
 
-  inp.textures[textureIdx++] = textureCreate("assets/soil.png");
+  inp.textures[textureIdx++] = textureCreate("assets/checker.png");
 
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;
