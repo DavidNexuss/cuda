@@ -23,7 +23,7 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
   sceneDesc.numThreads          = 8;
   sceneDesc.iterationsPerThread = 4;
   sceneDesc.rayDepth            = 4;
-  sceneDesc.framesInFlight      = 1;
+  sceneDesc.framesInFlight      = 4;
   sceneDesc.frameDelta          = 0.1;
   sceneDesc.fWriteClamped       = 1;
 
@@ -32,7 +32,7 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
   //Inits scene materials and meshes
   {
     initScene(&scene);
-    sceneUpload(&scene);
+    if(!cpu) sceneUpload(&scene);
   }
 
   //Inits scene objects
@@ -46,31 +46,30 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
       initSceneFrame(constants);
     }
 
-    sceneUploadObjects(&scene);
+    if(!cpu) sceneUploadObjects(&scene);
   }
 
-  if(cpu) { 
-    sceneRunCPU(&scene);
-  } else {
-    sceneRun(&scene);
-    sceneDownload(&scene);
-  }
+  if(!cpu) sceneRun(&scene);
+  if(!cpu) sceneDownload(&scene);
+
+  if(cpu) sceneRunCPU(&scene);
   for(int i = 0; i < sceneDesc.framesInFlight; i++) { 
     sceneWriteFrame(&scene, path, i);
   }
   sceneDestroy(&scene);
 }
 
-int main(int argc, char** argv) {
+void test1() { 
 
+  programRun("results/result_cpu_2.png", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop, 1);
   programRun("results/result_cpu.png", 1024, 1024, defaultScene, defaultSceneLoop, 1);
-  programRun("results/result_gpu.png", 1024, 1024, defaultScene, defaultSceneLoop, 0);
-/*
-  programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
-  programRun("result.hdr", 1024, 1024, defaultScene, defaultSceneLoop);
-  programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
-  programRun("result3.hdr", 1024 * 4, 1024 * 4, defaultScene, defaultSceneLoop); */
 
+  programRun("results/result_gpu.png", 1024, 1024, defaultScene, defaultSceneLoop, 0);
+  programRun("results/result_gpu_2.png", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop, 0);
+}
+
+int main(int argc, char** argv) {
+  test1();
   bufferDebugStats();
 }
 #include "objects.h"

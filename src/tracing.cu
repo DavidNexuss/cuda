@@ -4,52 +4,64 @@ extern "C" {
 #include "scene.h"
 }
 
-__device__ float3 prod(float3 a, float3 b) {
+#define HEAD __host__ __device__
+
+HEAD float3 prod(float3 a, float3 b) {
   return make_float3(a.x * b.x, a.y * b.y, a.z * b.z);
 }
-__device__ float3 prodScalar(float3 a, float t) {
+HEAD float3 prodScalar(float3 a, float t) {
   return prod(a, make_float3(t, t, t));
 }
-__device__ float3 sub(float3 a, float3 b) {
+HEAD float3 sub(float3 a, float3 b) {
   return make_float3(a.x - b.x, a.y - b.y, a.z - b.z);
 }
-__device__ float3 sum(float3 a, float3 b) {
+HEAD float3 sum(float3 a, float3 b) {
   return make_float3(a.x + b.x, a.y + b.y, a.z + b.z);
 }
 
 //This are cuda versions of basic linear algebra functionality
-__device__ float3 lReflect(float3 rd, float3 normal);
-__device__ float3 lRefract(float3 rd, float3 normal, float ior);
-__device__ float3 lNormalize(float3 v);
-__device__ float  lLen2(float3 a);
-__device__ float  lLen(float3 a);
+HEAD float3 lReflect(float3 rd, float3 normal);
+HEAD float3 lRefract(float3 rd, float3 normal, float ior);
+HEAD float3 lNormalize(float3 v);
+HEAD float  lLen2(float3 a);
+HEAD float  lLen(float3 a);
 
 //Returns origin + direction * distance
-__device__ float3 lAdvance(float3 origin, float3 direction, float distance);
+HEAD float3 lAdvance(float3 origin, float3 direction, float distance);
 
 //Retuns a normalized random direction
-__device__ float3 lRandomDirection();
+HEAD float3 lRandomDirection();
 
 //Retuns a normalized random direction in a hemisphere from normalvector
-__device__ float3 lRrandomDirectionHemisphere(float3 normalvector);
+HEAD float3 lRrandomDirectionHemisphere(float3 normalvector);
 
 //Returns sky color
-__device__ float3 lClearColorBackground(float3 rd, float3 ground, float3 orizon, float3 sky) {
+HEAD float3 lClearColorBackground(float3 rd, float3 ground, float3 orizon, float3 sky) {
   float t = rd.y;
   return sub(prodScalar(sky, t), prodScalar(ground, -t));
 }
 
 //Signed distance field functions combined with direction optimisation whenever possible
-__device__ int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* normal);
-__device__ int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta, float* normalDir);
+HEAD int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* normal);
+HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta, float* normalDir);
 
-__device__ float3 sampleTexture(dim3* rgb, float2 uv);
+HEAD float fracf(float x) { return x - floorf(x); }
+HEAD float2 fracf(float2 uv) { return make_float2(fracf(uv.x), fracf(uv.y)); }
 
-__host__ __device__ float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame) { 
-  float u = x / float(width);
-  float v = y / float(height);
+HEAD float3 sampleTexture(Texture* text, float2 uv) { 
+  uv = fracf(uv);
+  unsigned char* rgb = (unsigned char*)text->data;
+  int x = uv.x * text->width;
+  int y = uv.y * text->height;
+  
+  int i = (x * text->width + y) * 3;
+  return make_float3(rgb[i] / float(255.0f), rgb[i + 1] / float(255.0f), rgb[i + 2] / float(255.0f));
+}
 
-  return make_float3(u, v, 1);
+HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame) { 
+  float2 uv = make_float2(x / float(width), y / float(height));
+  return sampleTexture(input.textures, uv);
+  return make_float3(uv.x, uv.y, 1);
 }
 
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {

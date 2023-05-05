@@ -5,11 +5,14 @@
 Scene sceneCreate(SceneDesc desc) {
   Scene scene;
   scene.desc        = desc;
-  scene.textures    = bufferCreate(sizeof(Texture) * desc.maxTextures);
   scene.meshes      = bufferCreate(sizeof(Mesh) * desc.maxMeshes);
   scene.materials   = bufferCreate(sizeof(Material) * desc.maxMaterials);
   scene.framebuffer = bufferCreate(3 * sizeof(float) * desc.frameBufferWidth * desc.frameBufferHeight * desc.framesInFlight);
   scene.constants   = bufferCreate(sizeof(PushConstants) * desc.framesInFlight);
+
+  scene.texturesTable      = bufferCreate(sizeof(Texture) * desc.maxTextures);
+  scene.vertexBufferTable  = bufferCreate(sizeof(BufferObject) * desc.maxVertexBuffer);
+  scene.indexBufferTable   = bufferCreate(sizeof(BufferObject) * desc.maxIndexBuffer);
 
   scene.materialCount = -1;
   scene.textureCount  = -1;
@@ -26,8 +29,11 @@ Scene sceneCreate(SceneDesc desc) {
   }
 
   // Late
-  scene.vertexBuffers = (void**)malloc(sizeof(void*) * desc.maxVertexBuffer);
-  scene.indexBuffers  = (void**)malloc(sizeof(void*) * desc.maxIndexBuffer);
+  scene.vertexBuffersData = (void**)malloc(sizeof(void*) * desc.maxVertexBuffer);
+  scene.indexBuffersData  = (void**)malloc(sizeof(void*) * desc.maxIndexBuffer);
+  scene.texturesData      = (void**)malloc(sizeof(void*) * desc.maxTextures);
+
+  for(int i = 0; i < desc.maxTextures; i++) scene.texturesData[i] = 0; 
 
   return scene;
 }
@@ -37,17 +43,21 @@ SceneInput sceneInputHost(Scene* scene) {
   SceneInput inp;
   inp.materials = (Material*)scene->materials.H;
   inp.meshes    = (Mesh*)scene->meshes.H;
-  inp.textures  = (Texture*)scene->textures.H;
+  inp.textures  = (Texture*)scene->texturesTable.H;
   inp.constants = (PushConstants*)scene->constants.H;
+  inp.indexBuffers = (BufferObject*)scene->indexBufferTable.H;
+  inp.vertexBuffers= (BufferObject*)scene->vertexBufferTable.H;
   return inp;
 }
 
 SceneInput sceneInputDevice(Scene* scene) {
   SceneInput inp;
-  inp.materials = (Material*)scene->materials.D;
-  inp.meshes    = (Mesh*)scene->meshes.D;
-  inp.textures  = (Texture*)scene->textures.D;
-  inp.constants = (PushConstants*)scene->constants.D;
+  inp.materials    = (Material*)scene->materials.D;
+  inp.meshes       = (Mesh*)scene->meshes.D;
+  inp.textures     = (Texture*)scene->texturesTable.D;
+  inp.constants    = (PushConstants*)scene->constants.D;
+  inp.indexBuffers = (BufferObject*)scene->indexBufferTable.D;
+  inp.vertexBuffers= (BufferObject*)scene->vertexBufferTable.D;
   return inp;
 }
 
@@ -57,10 +67,15 @@ void sceneDestroy(Scene* scene) {
   bufferDestroy(&scene->materials);
   bufferDestroy(&scene->framebuffer);
 
-  for (int i = 0; i < scene->textureCount; i++) {
-    textureDestroy(&((Texture*)scene->textures.H)[i]);
+  {
+    for (int i = 0; i < scene->textureCount; i++) {
+      Texture* textureTable = scene->texturesTable.H;
+      textureDestroy(&textureTable[i]);
+      bufferDestroyImmutable(scene->texturesData[i]);
+    }
+    bufferDestroy(&scene->texturesTable);
+    free(scene->texturesData);
   }
-  bufferDestroy(&scene->textures);
 
   for (int i = 0; i < scene->desc.framesInFlight; i++) {
     bufferDestroy(&scene->objects[i]);
@@ -72,22 +87,44 @@ void sceneDestroy(Scene* scene) {
   //Late
 
   for (int i = 0; i < scene->vertexBufferCount; i++) {
-    bufferDestroyImmutable(&scene->vertexBuffers[i]);
+    BufferObject* objects = scene->vertexBufferTable.H;
+    free(objects[i].data);
+    bufferDestroyImmutable(&scene->vertexBuffersData[i]);
   }
 
   for (int i = 0; i < scene->indexBufferCount; i++) {
-    bufferDestroyImmutable(&scene->indexBuffers[i]);
+    BufferObject* objects = scene->indexBufferTable.H;
+    free(objects[i].data);
+    bufferDestroyImmutable(&scene->indexBuffersData[i]);
   }
 
-  free(scene->vertexBuffers);
-  free(scene->indexBuffers);
+  bufferDestroy(&scene->vertexBufferTable);
+  bufferDestroy(&scene->indexBufferTable);
+  free(scene->vertexBuffersData);
+  free(scene->indexBuffersData);
 }
 
 /* uploads scene */
 void sceneUpload(Scene* scene) {
   bufferUploadAmount(&scene->materials, scene->materialCount * sizeof(Material));
   bufferUploadAmount(&scene->meshes, scene->meshCount * sizeof(Mesh));
-  bufferUploadAmount(&scene->textures, scene->textureCount * sizeof(Texture));
+
+  void** tmp = malloc(sizeof(void*) * scene->textureCount); 
+  SceneInput inp = sceneInputHost(scene);
+  for(int i = 0; i < scene->textureCount; i++) { 
+    Texture t = inp.textures[i];
+    scene->texturesData[i] = bufferCreateImmutable(t.data, t.channels * t.height * t.width);
+    tmp[i] = inp.textures[i].data;
+    inp.textures[i].data = scene->texturesData[i];
+  }
+
+  bufferUploadAmount(&scene->texturesTable, scene->textureCount * sizeof(Texture));
+
+  for(int i = 0; i < scene->textureCount; i++) { 
+    inp.textures[i].data = tmp[i];
+  }
+
+  free(tmp);
 }
 
 void sceneUploadObjects(Scene* scene) {

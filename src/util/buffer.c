@@ -6,6 +6,7 @@
 
 // MUTABLE BUFFER, abstraction to handle pairs of host and device buffers
 
+#define KILL dprintf(2, "%d", 0/0)
 // For error checking and correct memory release
 int gBufferTotalAllocatedSize = 0;
 int gBufferPeakAllocatedSize  = 0;
@@ -41,9 +42,10 @@ void bufferDestroy(Buffer* buffer) {
 }
 
 void bufferDestroyImmutable(void* buffer) { 
+  if(buffer == 0) return;
   if(cudaFree(buffer) != cudaSuccess){ 
-    dprintf(2, "Cuda free error %p!\n", buffer);
-    exit(1);
+    dprintf(2, "Cuda free immutable error %p!\n", buffer);
+    KILL;
   }
 }
 

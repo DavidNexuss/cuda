@@ -59,40 +59,43 @@ typedef struct _Scene {
   //Input buffer objects
   Buffer meshes;
   Buffer materials;
-  Buffer textures;
 
   //Output buffer objects
   Buffer framebuffer;
 
   //Uniforms
-  Buffer* objects; //List of buffers, one per each frame in flight
+  Buffer* objects; 
   Buffer  constants;
 
   int materialCount;
   int meshCount;
-  int textureCount;
 
   //Scene configuration
   SceneDesc desc;
 
   //Late
+  void** texturesData;
+  void** vertexBuffersData;
+  void** indexBuffersData;
 
-  //This could be merged in one table and one buffer for both vbo and ebo, but we thought this would be
-  // more sensical
-  void** vertexBuffers;
-  void** indexBuffers;
+  Buffer texturesTable;
+  Buffer vertexBufferTable;
+  Buffer indexBufferTable;
 
   int vertexBufferCount;
   int indexBufferCount;
+  int textureCount;
 
 } Scene;
 
 /* bag of pointers */
 typedef struct {
-  Material*      materials;
-  Mesh*          meshes;
-  Texture*       textures;
-  PushConstants* constants;
+  Material*        materials;
+  Mesh*            meshes;
+  Texture*         textures;
+  PushConstants*   constants;
+  BufferObject*    vertexBuffers;
+  BufferObject*    indexBuffers;
 } SceneInput;
 
 
