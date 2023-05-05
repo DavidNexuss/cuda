@@ -5,14 +5,10 @@
 Texture textureCreate(const char* texturePath) {
   Texture        text;
   unsigned char* data = stbi_load(texturePath, &text.width, &text.height, &text.channels, 3);
-  text.data           = bufferCreate(text.width * text.height * text.channels);
-  memcpy(text.data.H, data, text.data.allocatedSize);
+  text.data           = bufferCreateImmutable(data, text.width * text.height * text.channels * sizeof(char));
   stbi_image_free(data);
   return text;
 }
 void textureDestroy(Texture* text) {
-  bufferDestroy(&text->data);
-}
-void textureUpload(Texture* text) {
-  bufferUpload(&text->data);
+  bufferDestroyImmutable(&text->data);
 }

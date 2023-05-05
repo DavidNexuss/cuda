@@ -1,6 +1,5 @@
 #pragma once
 #include "util/linear.h"
-
 // Camera
 typedef struct {
   float3 origin;
@@ -52,22 +51,15 @@ typedef struct {
     } tPlain;
 
     struct {
-      int vertexBufferIndex;
-      int indexBufferIndex;
+      void* vertexBufferIndex;
+      void* indexBufferIndex;
+      union {
+        int vertexCount;
+        int indexCount;
+      };
     } tMesh;
   };
 } Mesh;
 
-Mesh meshPlain(float3 normal) {
-  Mesh pl;
-  pl.type          = PLAIN;
-  pl.tPlain.normal = normal;
-  return pl;
-}
-
-Mesh meshSphere(float radius) {
-  Mesh m;
-  m.type           = SPHERE;
-  m.tSphere.radius = radius;
-  return m;
-}
+Mesh meshPlain(float3 normal);
+Mesh meshSphere(float radius);

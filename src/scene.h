@@ -14,16 +14,24 @@ typedef struct {
  This struct defines all configurable parameters for class scene
 */
 typedef struct {
-  int   maxObjects;
-  int   maxMaterials;
-  int   maxMeshes;
-  int   maxTextures;
-  int   frameBufferWidth;
-  int   frameBufferHeight;
+
+  //Satic sized allocated buffers, ugly but comfortable
+  int maxObjects;
+  int maxMaterials;
+  int maxMeshes;
+  int maxTextures;
+  int maxVertexBuffer;
+  int maxIndexBuffer;
+
+  //Framebuffer definition
+  int frameBufferWidth;
+  int frameBufferHeight;
+  int framesInFlight;
+
+  //Cuda algorithm parameters
   int   numThreads;
   int   iterationsPerThread;
   int   rayDepth;
-  int   framesInFlight;
   float frameDelta;
 } SceneDesc;
 
@@ -64,6 +72,16 @@ typedef struct _Scene {
 
   //Scene configuration
   SceneDesc desc;
+
+  //Late
+
+  //This could be merged in one table and one buffer for both vbo and ebo, but we thought this would be
+  // more sensical
+  void** vertexBuffers;
+  void** indexBuffers;
+
+  int vertexBufferCount;
+  int indexBufferCount;
 
 } Scene;
 

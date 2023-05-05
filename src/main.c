@@ -60,8 +60,7 @@ int main(int argc, char** argv) {
   programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
   programRun("result3.hdr", 1024 * 4, 1024 * 4, defaultScene, defaultSceneLoop);
 
-  dprintf(2, "[STATS] Peak memory use: %d\n", gBufferPeakAllocatedSize);
-  dprintf(2, "[STATS] Memory leak : %d\n", gBufferTotalAllocatedSize);
+  bufferDebugStats();
 }
 #include "objects.h"
 
@@ -79,7 +78,7 @@ void defaultScene(Scene* scene) {
   int objectIdx   = 0;
   int textureIdx  = 0;
 
-  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 0));
+  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 0, 0));
   inp.meshes[meshIdx++] = meshPlain(make_float3(1, 0, 0));
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 0, 1));
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 1));

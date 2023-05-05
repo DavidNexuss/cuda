@@ -23,6 +23,10 @@ Scene sceneCreate(SceneDesc desc) {
     cn[i].objects    = (Object*)scene.objects[i].H;
   }
 
+  // Late
+  scene.vertexBuffers = (void**)malloc(sizeof(void*) * desc.maxVertexBuffer);
+  scene.indexBuffers  = (void**)malloc(sizeof(void*) * desc.maxIndexBuffer);
+
   return scene;
 }
 
@@ -61,6 +65,19 @@ void sceneDestroy(Scene* scene) {
   }
 
   free(scene->objects);
+
+  //Late
+
+  for (int i = 0; i < scene->vertexBufferCount; i++) {
+    bufferDestroyImmutable(&scene->vertexBuffers[i]);
+  }
+
+  for (int i = 0; i < scene->indexBufferCount; i++) {
+    bufferDestroyImmutable(&scene->indexBuffers[i]);
+  }
+
+  free(scene->vertexBuffers);
+  free(scene->indexBuffers);
 }
 
 /* uploads scene */
@@ -68,10 +85,6 @@ void sceneUpload(Scene* scene) {
   bufferUploadAmount(&scene->materials, scene->materialCount * sizeof(Material));
   bufferUploadAmount(&scene->meshes, scene->meshCount * sizeof(Mesh));
   bufferUploadAmount(&scene->textures, scene->textureCount * sizeof(Texture));
-
-  for (int i = 0; i < scene->textureCount; i++) {
-    textureUpload((Texture*)&scene->textures.H[i]);
-  }
 }
 
 void sceneUploadObjects(Scene* scene) {
