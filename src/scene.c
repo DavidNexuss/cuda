@@ -127,6 +127,8 @@ float* sceneGetFrame(Scene* scene, int index) {
   return (float*)&scene->framebuffer.H[index * 3 * sizeof(float) * scene->desc.frameBufferWidth * scene->desc.frameBufferHeight];
 }
 
+#include <stdio.h>
 void sceneWriteFrame(Scene* scene, const char* path, int index) {
+  dprintf(2, "[IO] Writing frame [%d] for scene to %s\n", index, path);
   stbi_write_hdr(path, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 3, sceneGetFrame(scene, index));
 }

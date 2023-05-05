@@ -15,12 +15,15 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
   sceneDesc.maxMeshes           = 300;
   sceneDesc.maxObjects          = 400;
   sceneDesc.maxMaterials        = 300;
+  sceneDesc.maxTextures         = 10;
+  sceneDesc.maxVertexBuffer     = 10;
+  sceneDesc.maxIndexBuffer      = 10;
   sceneDesc.frameBufferWidth    = width;
   sceneDesc.frameBufferHeight   = height;
   sceneDesc.numThreads          = 4;
   sceneDesc.iterationsPerThread = 4;
   sceneDesc.rayDepth            = 4;
-  sceneDesc.framesInFlight      = 1;
+  sceneDesc.framesInFlight      = 4;
   sceneDesc.frameDelta          = 0.1;
 
   Scene scene = sceneCreate(sceneDesc);
@@ -47,7 +50,9 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
 
   sceneRun(&scene);
   sceneDownload(&scene);
-  sceneWriteFrame(&scene, path, 0);
+  for(int i = 0; i < sceneDesc.framesInFlight; i++) { 
+    sceneWriteFrame(&scene, path, i);
+  }
   sceneDestroy(&scene);
 }
 
@@ -74,7 +79,6 @@ void defaultScene(Scene* scene) {
 
   int meshIdx     = 0;
   int materialIdx = 0;
-  int objectIdx   = 0;
   int textureIdx  = 0;
 
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 0, 0));
@@ -112,6 +116,7 @@ void defaultScene(Scene* scene) {
     1.01);
 
   inp.textures[textureIdx++] = textureCreate("assets/checker.png");
+  inp.textures[textureIdx++] = textureCreate("assets/stone.jpg");
 
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;

@@ -46,8 +46,8 @@ __device__ int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta, fl
 __device__ float3 sampleTexture(dim3* rgb, float2 uv);
 
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
-  Camera* cam     = &(input.constants + blockIdx.z)->camera;
-  Object* objects = (input.constants + blockIdx.z)->objects;
+  PushConstants* cn = input.constants + blockIdx.z;
+  float* fbo = fbo_mat + blockIdx.z * width * height * 3;
 
   float u = blockIdx.x / float(width);
   float v = blockIdx.y / float(height);
@@ -57,11 +57,9 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
 
   extern __shared__ float3 result[];
 
-  float* fbo = fbo_mat + blockIdx.z * width * height * 3;
-
-  float3 sro = cam->origin;
-  float3 srd = make_float3(u * 2 - 1, v * 2 - 1, 1);
-
+  fbo[pixelIdx]     = u;
+  fbo[pixelIdx + 1] = v;
+  fbo[pixelIdx + 2] = threadIdx.x / float(blockDim.x);
 
   //Perform path tracing using rd and ro
 
@@ -84,12 +82,7 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
   fbo[pixelIdx + 1] = result.y;
   fbo[pixelIdx + 2] = result.z;
 #endif
-#if 1
   //Default uv gradient test
-  fbo[pixelIdx]     = u;
-  fbo[pixelIdx + 1] = v;
-  fbo[pixelIdx + 2] = threadIdx.x / float(blockDim.x);
-#endif
 }
 
 extern "C" {
@@ -99,12 +92,12 @@ void sceneRun(Scene* scene) {
   int  numThreads          = scene->desc.numThreads;
   int  iterationsPerThread = scene->desc.iterationsPerThread;
   int jobId = jobIdCounter;
-  dprintf(2, "[%d] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
+  dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
 
   pathTracingKernel<<<numBlocks, numThreads, sizeof(float) * 3 * numThreads>>>(
     scene->desc.frameBufferWidth,
     scene->desc.frameBufferHeight, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene));
-  dprintf(2, "[%d] done\n", jobId);
+  dprintf(2, "[CUDA %d ] done\n", jobId);
   jobIdCounter++;
 }
 }
