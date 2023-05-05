@@ -23,8 +23,9 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
   sceneDesc.numThreads          = 4;
   sceneDesc.iterationsPerThread = 4;
   sceneDesc.rayDepth            = 4;
-  sceneDesc.framesInFlight      = 4;
+  sceneDesc.framesInFlight      = 1;
   sceneDesc.frameDelta          = 0.1;
+  sceneDesc.fWriteClamped       = 1;
 
   Scene scene = sceneCreate(sceneDesc);
 
@@ -58,11 +59,12 @@ void programRun(const char* path, int width, int height, void(initScene)(Scene*)
 
 int main(int argc, char** argv) {
 
-  programRun("result.hdr", 1024, 1024, defaultScene, defaultSceneLoop);
+  programRun("result.png", 1024, 1024, defaultScene, defaultSceneLoop);
+/*
   programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
   programRun("result.hdr", 1024, 1024, defaultScene, defaultSceneLoop);
   programRun("result2.hdr", 1024 * 2, 1024 * 2, defaultScene, defaultSceneLoop);
-  programRun("result3.hdr", 1024 * 4, 1024 * 4, defaultScene, defaultSceneLoop);
+  programRun("result3.hdr", 1024 * 4, 1024 * 4, defaultScene, defaultSceneLoop); */
 
   bufferDebugStats();
 }

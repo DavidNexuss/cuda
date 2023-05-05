@@ -33,6 +33,8 @@ typedef struct {
   int   iterationsPerThread;
   int   rayDepth;
   float frameDelta;
+
+  int   fWriteClamped;
 } SceneDesc;
 
 typedef struct {

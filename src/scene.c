@@ -130,5 +130,27 @@ float* sceneGetFrame(Scene* scene, int index) {
 #include <stdio.h>
 void sceneWriteFrame(Scene* scene, const char* path, int index) {
   dprintf(2, "[IO] Writing frame [%d] for scene to %s\n", index, path);
-  stbi_write_hdr(path, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 3, sceneGetFrame(scene, index));
+  if(scene->desc.fWriteClamped) { 
+    
+    int top = scene->desc.frameBufferWidth * scene->desc.frameBufferHeight * 3;
+    float* fbo = sceneGetFrame(scene, index);
+    unsigned char* png = (unsigned char*)malloc(top);
+
+    float maxValue = 0.0f;
+    float minValue = 10000000.0f;
+    for(int i = 0; i < top; i++) { 
+      if(fbo[i] > maxValue) maxValue = fbo[i];
+      if(fbo[i] < minValue) minValue = fbo[i];
+    }
+    
+    if((maxValue - minValue) < 0.01) { maxValue += 0.2; }
+    for(int i = 0; i < top; i++) { 
+      png[i] = ((fbo[i] - minValue)/ (maxValue - minValue)) * 0xff;
+    }
+    
+    stbi_write_png(path, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 3, png, scene->desc.frameBufferWidth * 3);
+    free(png);
+  } else { 
+    stbi_write_hdr(path, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 3, sceneGetFrame(scene, index)); 
+  }
 }
