@@ -2,11 +2,11 @@
 
 typedef struct {
   void *H, *D;
-  unsigned int   allocatedSize;
+  unsigned long long allocatedSize;
 } Buffer;
 
 Buffer bufferCreate(int size);
-void*  bufferCreateImmutable(void* data, int size);
+void*  bufferCreateImmutable(void* data, unsigned long long size);
 void   bufferDestroy(Buffer* buffer);
 void   bufferDestroyImmutable(void* buffer);
 void   bufferUploadAmount(Buffer* buffer, int amount);

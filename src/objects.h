@@ -51,8 +51,8 @@ typedef struct {
     } tPlain;
 
     struct {
-      void* vertexBufferIndex;
-      void* indexBufferIndex;
+      int vertexBufferIndex;
+      int indexBufferIndex;
       union {
         int vertexCount;
         int indexCount;
