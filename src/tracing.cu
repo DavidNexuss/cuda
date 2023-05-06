@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 extern "C" {
-#include "scene.h"
+#include <scene.h>
 }
 
 #define HEAD __host__ __device__

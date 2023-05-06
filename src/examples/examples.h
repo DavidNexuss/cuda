@@ -1,5 +1,5 @@
 #pragma once
-#include "../scene.h"
+#include <scene.h>
 void defaultScene(Scene* scene);
 void defaultSceneLoop(PushConstants* cn);
 
