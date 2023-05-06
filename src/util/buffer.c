@@ -19,12 +19,18 @@ Buffer bufferCreate(int size) {
   Buffer buffer;
   buffer.allocatedSize = size;
   buffer.H             = (unsigned char*)malloc(size);
-  cudaMalloc((void**)&buffer.D, size);
+  if(cudaMalloc((void**)&buffer.D, size) != cudaSuccess) { 
+	dprintf(2, "Error cuda malloc regular buffer %d\n", size);
+	KILL;
+  }
   return buffer;
 }
 void* bufferCreateImmutable(void* data, unsigned long long size) {
   void* buffer;
-  cudaMalloc((void**)&buffer, size);
+  if(cudaMalloc((void**)&buffer, size) != cudaSuccess) { 
+	dprintf(2, "Error cuda malloc immutable buffer %ldd\n", size);
+	KILL;
+  }
   cudaMemcpy((void*)buffer, data, size, cudaMemcpyHostToDevice);
   dprintf(2, "Create immutable %p\n", buffer);
   return buffer;
