@@ -2,8 +2,8 @@ GCC 	     = $(CUDA_HOME)/bin/gcc
 NVCC         = $(CUDA_HOME)/bin/nvcc
 INCLUDE_DIRS = -I$(CUDA_HOME)/include -I$(CUDA_HOME)/sdk/CUDALibraries/common/inc -I include -I src -I$(CUDA_HOME)/sdk/CUDALibraries/common/lib -I/opt/cuda/include
 
-NVCC_FLAGS_LOCAL = -O3
-NVCC_FLAGS  		 = -O3 -Wno-deprecated-gpu-targets -gencode arch=compute_86,code=sm_86 --ptxas-options=-v $(INCLUDE_DIRS)
+NVCC_FLAGS_LOCAL = -g
+NVCC_FLAGS  		 = -g -Wno-deprecated-gpu-targets -gencode arch=compute_86,code=sm_86 --ptxas-options=-v $(INCLUDE_DIRS)
 LD_FLAGS    		 = -lcudart -Xlinker -rpath,$(CUDA_HOME)/lib64 $(INCLUDE_DIRS)
 
 GCC_FLAGS   = -g $(INCLUDE_DIRS)
@@ -40,8 +40,8 @@ $(ODIR)/%.o : $(IDIR)/**/%.c
 	mkdir -p obj
 	$(GCC) $(GCC_FLAGS) -c $^ -o $@
 
-$(OUT): $(OBJECTS) $(CUDA_OBJECTS)
-	$(NVCC) $^ -o $@ 
+$(OUT): $(OBJECTS) $(CUDA_OBJECTS) src_bin/main.c
+	$(NVCC) $(LD_FLAGS) $^ -o $@ 
 
 
 clean: $(ODIR) $(BIN)

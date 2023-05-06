@@ -15,6 +15,7 @@ void scene2(Scene* scene) {
     make_float3(0.1, 0.1, 0.1),
     0.1,
     1.01);
+  inp.materials[0].diffuseTexture =0;
 
   inp.materials[materialIdx++] = materialCreate(
     make_float3(0.8, 0.7, 0.2),
@@ -50,14 +51,15 @@ void scene2Loop(PushConstants* cn) {
   cn->uniforms.skyColor    = make_float3(0.2, 0.4, 0.9);
   cn->uniforms.groundColor = make_float3(0.2, 0.2, 0.2);
   cn->uniforms.orizonColor = make_float3(0.7, 0.8, 0.9);
+  cn->uniforms.skyTexture  = 1;
 
   cn->camera.up        = make_float3(0, 1, 0);
   cn->camera.znear     = 0.1f;
-  cn->camera.origin    = make_float3(0, 0, 0);
+  cn->camera.origin    = make_float3(0, 1, 0);
   cn->camera.direction = make_float3(0, 0, -1);
 
   int objectIdx            = 0;
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, -1, 1));
 
-  cn->objectCount = objectIdx;
+  cn->objectCount = 1;
 }

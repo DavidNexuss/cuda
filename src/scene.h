@@ -9,6 +9,7 @@ typedef struct {
   float3 skyColor;
   float3 orizonColor;
   float3 groundColor;
+  int skyTexture;
 } RenderingUniforms;
 
 /*

@@ -50,7 +50,9 @@ HEAD unsigned int lHash(unsigned int x) {
 }
 
 //Returns origin + direction * distance
-HEAD float3 lAdvance(float3 origin, float3 direction, float distance);
+HEAD float3 lAdvance(float3 origin, float3 direction, float distance) { 
+  return make_float3(origin.x + direction.x * distance, origin.y + direction.y * distance, origin.z + direction.z * distance);
+}
 
 //Retuns a normalized random direction
 
@@ -65,7 +67,12 @@ HEAD float3 lClearColorBackground(float3 rd, float3 ground, float3 orizon, float
 
 //Signed distance field functions combined with direction optimisation whenever possible
 HEAD int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* normal);
-HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta, float* normalDir);
+HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta) { 
+
+  if(rd.y > 0.0f) return 0;
+  *delta = ro.y/ rd.y;
+  return 1;
+}
 
 HEAD float fracf(float x) { return x - floorf(x); }
 HEAD float2 fracf(float2 uv) { return make_float2(fracf(uv.x), fracf(uv.y)); }
@@ -87,12 +94,16 @@ HEAD float3 sampleEnvMap(Texture* text, float3 rd) {
   float y = 0.5 + atan2(rd.y, sqrt(rd.x * rd.x + rd.z * rd.z)) / (2 * M_PI);
   return sampleTexture(text, make_float2(x, 1 - y));
 }
-
+#define FLT_MAX 3.402823466e+38F /* max value */
 HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame, int magic) { 
   float2 uv = make_float2((2*y / float(height)) - 1, (2*(width - x) / float(width)) - 1);
+  PushConstants* constants = input.constants + frame;
+  Texture* skyTexture = &input.textures[constants->uniforms.skyTexture];
+  Mesh* meshes = input.meshes;
+
   float3 rd = make_float3(uv.x, uv.y, -1);
-  float3 ro = make_float3(0,0,0);
-  
+  float3 ro = constants->camera.origin;
+  //DOF
   magic = lHash(magic);
   rd.x = rd.x + lRandom(lHash(magic)) * 0.002;
   rd.y = rd.y + lRandom(lHash(magic+ 71)) * 0.002;
@@ -100,9 +111,57 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
   rd = lNormalize(rd);
 
-  if(rd.y > 0) { 
-    return sampleEnvMap(&input.textures[1], rd);
+  float3 currentColor = make_float3(1,1,1);
+  for(int d = 0; d < maxDepth; d++) { 
+    float3 hitNormal;
+    float delta = FLT_MAX;
+    int collisionObject = -1;
+    for(int i = 0; i < constants->objectCount; i++) { 
+      Object* obj = &constants->objects[i];
+      float partialDelta;
+      float3 partialNormal;
+      int hitStatus;
+      switch (meshes[obj->mesh].type) {
+        case PLAIN:
+          partialNormal = meshes[obj->mesh].tPlain.normal;
+          hitStatus = sdfHitPlane(ro, rd, make_float3(0,1,0), &partialDelta); 
+          break;
+        case SPHERE:
+          break;
+        case MESH:
+          break;
+      }
+
+      if(hitStatus == 1) { 
+        if(partialDelta < delta) { 
+          delta = partialDelta;
+          hitNormal = partialNormal;
+          collisionObject = i;
+        }
+      }
+    }
+    
+    if(collisionObject == -1) { 
+      return prod(currentColor, sampleEnvMap(skyTexture, rd));
+    }
+
+    float3 nro = lAdvance(ro, rd, delta);
+    float3 nrd = lReflect(rd, hitNormal);
+
+    Object* obj = &constants->objects[collisionObject];
+    Material* mat = &input.materials[obj->material];
+
+    if(mat->diffuseTexture >= 0) { 
+       currentColor = prod(currentColor, sampleTexture(&input.textures[mat->diffuseTexture], make_float2(nro.x, nro.z)));
+    } else { 
+       currentColor = prod(currentColor, mat->kd);
+    }
+
+    ro = nro;
+    rd = nrd;
   }
+  return currentColor;
+#if 0
 
   float floory = -1;
   float lambda = (ro.y - floory) / rd.y;
@@ -111,7 +170,8 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
   float3 color = sampleTexture(&input.textures[0], make_float2(target.x, target.z));
   
-  return sum(color, sampleEnvMap(&input.textures[1], lReflect(rd, make_float3(0,1,0))));
+  return sum(color, sampleEnvMap(skyTexture, lReflect(rd, make_float3(0,1,0))));
+#endif
 }
 
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
