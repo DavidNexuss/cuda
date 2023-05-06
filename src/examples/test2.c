@@ -52,11 +52,12 @@ void scene2Loop(PushConstants* cn) {
   cn->uniforms.groundColor = make_float3(0.2, 0.2, 0.2);
   cn->uniforms.orizonColor = make_float3(0.7, 0.8, 0.9);
   cn->uniforms.skyTexture  = 1;
+  cn->camera.znear     = 0.1f;
 
   cn->camera.up        = make_float3(0, 1, 0);
-  cn->camera.znear     = 0.1f;
   cn->camera.origin    = make_float3(0, 1, 0);
   cn->camera.direction = make_float3(0, 0, -1);
+  cn->camera.crossed   = make_float3(1, 0, 0);
 
   int objectIdx            = 0;
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, -1, 1));

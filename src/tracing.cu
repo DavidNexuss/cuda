@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 extern "C" {
-#include <scene.h>
+#include "../include/scene.h"
 }
 
 #define HEAD __host__ __device__
@@ -104,7 +104,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
   Texture*       skyTexture = &input.textures[constants->uniforms.skyTexture];
   Mesh*          meshes     = input.meshes;
 
-  float3 rd = make_float3(uv.x, uv.y, -1);
+  float3 rd = make_float3(uv.x, uv.y, 1);
   float3 ro = constants->camera.origin;
   //DOF
   magic = lHash(magic);
@@ -112,7 +112,12 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
   rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.002;
   rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.002;
 
-  rd = lNormalize(rd);
+  float3 rdProjected = make_float3(
+      constants->camera.crossed.x * rd.x + constants->camera.up.x * rd.y + constants->camera.direction.x * rd.z,
+      constants->camera.crossed.y * rd.x + constants->camera.up.y * rd.y + constants->camera.direction.y * rd.z,
+      constants->camera.crossed.z * rd.x + constants->camera.up.z * rd.y + constants->camera.direction.z * rd.z);
+
+  rd = lNormalize(rdProjected);
 
   float3 currentColor = make_float3(1, 1, 1);
   for (int d = 0; d < maxDepth; d++) {
