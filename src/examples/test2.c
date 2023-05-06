@@ -61,5 +61,5 @@ void scene2Loop(PushConstants* cn) {
   int objectIdx            = 0;
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, -1, 1));
 
-  cn->objectCount = 1;
+  cn->objectCount = objectIdx;
 }

@@ -164,23 +164,23 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
     rd = nrd;
 
     magic = lHash(magic);
-    rd.x  = rd.x + lRandom(lHash(magic)) * 0.5;
-    rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.4;
-    rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.25;
+    rd.x  = rd.x + lRandom(lHash(magic)) * 0.1;
+    rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.12;
+    rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.12;
 
     rd = lNormalize(rd);
   }
   return currentColor;
 }
 
-__global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
+__global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input, int magic) {
 
   int    pixelIdx = (blockIdx.y * width + blockIdx.x) * 3;
   float* fbo      = &fbo_mat[blockIdx.z * width * height * 3];
 
   extern __shared__ float3 sharedResults[];
   float3                   partial = make_float3(0, 0, 0);
-  int                      tid     = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread;
+  int                      tid     = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread + magic;
   for (int i = 0; i < iterationsPerThread; i++) {
     float3 partialResult = pathTracing(width, height, iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z, tid + i);
     partial.x += partialResult.x;
@@ -199,9 +199,9 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
       finalResult.y += sharedResults[i].y;
       finalResult.z += sharedResults[i].z;
     }
-    fbo[pixelIdx]     = finalResult.x / blockDim.x;
-    fbo[pixelIdx + 1] = finalResult.y / blockDim.x;
-    fbo[pixelIdx + 2] = finalResult.z / blockDim.x;
+    fbo[pixelIdx]     = fbo[pixelIdx] * 0.5 + (finalResult.x / blockDim.x) * 0.5;
+    fbo[pixelIdx + 1] = fbo[pixelIdx + 1] * 0.5 + (finalResult.y / blockDim.x) * 0.5;
+    fbo[pixelIdx + 2] = fbo[pixelIdx + 2] * 0.5 + (finalResult.z / blockDim.x) * 0.5;
   }
 }
 static int jobIdCounter = 0;
@@ -211,7 +211,7 @@ void       _sceneRun(Scene* scene) {
   int  iterationsPerThread = scene->desc.iterationsPerThread;
   int  jobId               = jobIdCounter;
   dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads.x, iterationsPerThread);
-  pathTracingKernel<<<numBlocks, numThreads, sizeof(float3) * numThreads.x>>>(numBlocks.x, numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene));
+  pathTracingKernel<<<numBlocks, numThreads, sizeof(float3) * numThreads.x>>>(numBlocks.x, numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene), lHash(jobIdCounter * 4 + 7));
   dprintf(2, "[CUDA %d ] done\n", jobId);
   jobIdCounter++;
 }

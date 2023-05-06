@@ -58,7 +58,7 @@ void bufferUploadAmount(Buffer* buffer, int amount) {
     amount = buffer->allocatedSize;
   }
   if (amount > buffer->allocatedSize) {
-    dprintf(2, "Too much memory to upload");
+    dprintf(2, "Too much memory to upload %d against %lld\n", amount, buffer->allocatedSize);
     exit(1);
   }
 
