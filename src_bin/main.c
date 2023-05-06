@@ -78,11 +78,10 @@ void test2() {
   sceneDesc.frameBufferWidth = 1024 * 4;
   sceneDesc.frameBufferHeight = 1024 * 4;
   sceneDesc.framesInFlight = 1;
-  sceneDesc.fWriteClamped = 1;
+  sceneDesc.fWriteClamped = 0;
   sceneDesc.iterationsPerThread = 32;
   sceneDesc.numThreads = 16;
-  programRun(sceneDesc, "results/result_gpu_test2.png", scene2, scene2Loop, 0); /*
-  programRun(sceneDesc, "results/result_cpu_test2.png", scene2, scene2Loop, 1); */
+  programRun(sceneDesc, "results/result_gpu_test2.png", scene2, scene2Loop, 0); 
 }
 
 int main(int argc, char** argv) {
