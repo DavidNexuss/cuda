@@ -90,9 +90,10 @@ HEAD float3 sampleTexture(Texture* text, float2 uv) {
 }
 
 HEAD float3 sampleEnvMap(Texture* text, float3 rd) {
-  float x = atan2(rd.z, rd.x) / (2 * M_PI);
-  float y = 0.5 + atan2(rd.y, sqrt(rd.x * rd.x + rd.z * rd.z)) / (2 * M_PI);
-  return sampleTexture(text, make_float2(x, 1 - y));
+  float x = 1.5 * atan2(rd.z, rd.x) / (2 * M_PI);
+  float y = 0.5 + 2.0 * atan2(rd.y, sqrt(rd.x * rd.x + rd.z * rd.z)) / (2 * M_PI);
+  float3 result = sampleTexture(text, make_float2(x, 1 - y));
+  return prodScalar(prod(result, result), 2.5);
 }
 #define FLT_MAX 3.402823466e+38F /* max value */
 HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame, int magic) { 
@@ -159,6 +160,13 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
     ro = nro;
     rd = nrd;
+
+    magic = lHash(magic);
+    rd.x = rd.x + lRandom(lHash(magic)) * 0.06;
+    rd.y = rd.y + lRandom(lHash(magic+ 71)) * 0.04;
+    rd.z = rd.z + lRandom(lHash(magic+ 45)) * 0.025;
+
+    rd = lNormalize(rd);
   }
   return currentColor;
 #if 0
@@ -200,9 +208,9 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
       finalResult.y += sharedResults[i].y;
       finalResult.z += sharedResults[i].z;
     }
-    fbo[pixelIdx]     = finalResult.x;
-    fbo[pixelIdx + 1] = finalResult.y;
-    fbo[pixelIdx + 2] = finalResult.z;
+    fbo[pixelIdx]     = finalResult.x / blockDim.x;
+    fbo[pixelIdx + 1] = finalResult.y / blockDim.x;
+    fbo[pixelIdx + 2] = finalResult.z / blockDim.x;
   }
 
 }
