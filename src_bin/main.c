@@ -75,8 +75,8 @@ void test1() {
 void test2() {
 
   SceneDesc sceneDesc           = defaultDesc();
-  sceneDesc.frameBufferWidth    = 1024 * 4;
-  sceneDesc.frameBufferHeight   = 1024 * 4;
+  sceneDesc.frameBufferWidth    = 1280;
+  sceneDesc.frameBufferHeight   = 720;
   sceneDesc.framesInFlight      = 1;
   sceneDesc.fWriteClamped       = 1;
   sceneDesc.iterationsPerThread = 32;

@@ -96,7 +96,10 @@ HEAD float3 sampleEnvMap(Texture* text, float3 rd) {
 }
 #define FLT_MAX 3.402823466e+38F /* max value */
 HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame, int magic) {
-  float2         uv         = make_float2((2 * y / float(height)) - 1, (2 * (width - x) / float(width)) - 1);
+  float  ra = float(width) / float(height);
+  float2 uv = make_float2((2 * x / float(width)) - 1, (2 * (height - y) / float(height)) - 1);
+  uv.x *= ra;
+
   PushConstants* constants  = input.constants + frame;
   Texture*       skyTexture = &input.textures[constants->uniforms.skyTexture];
   Mesh*          meshes     = input.meshes;
@@ -161,9 +164,9 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
     rd = nrd;
 
     magic = lHash(magic);
-    rd.x  = rd.x + lRandom(lHash(magic)) * 0.06;
-    rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.04;
-    rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.025;
+    rd.x  = rd.x + lRandom(lHash(magic)) * 0.5;
+    rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.4;
+    rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.25;
 
     rd = lNormalize(rd);
   }
@@ -172,7 +175,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
 
-  int    pixelIdx = (blockIdx.x * width + blockIdx.y) * 3;
+  int    pixelIdx = (blockIdx.y * width + blockIdx.x) * 3;
   float* fbo      = &fbo_mat[blockIdx.z * width * height * 3];
 
   extern __shared__ float3 sharedResults[];
