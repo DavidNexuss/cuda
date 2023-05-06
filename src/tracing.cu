@@ -204,9 +204,15 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
       finalResult.y += sharedResults[i].y;
       finalResult.z += sharedResults[i].z;
     }
-    fbo[pixelIdx]     = fbo[pixelIdx] * 0.5 + (finalResult.x / blockDim.x) * 0.5;
-    fbo[pixelIdx + 1] = fbo[pixelIdx + 1] * 0.5 + (finalResult.y / blockDim.x) * 0.5;
-    fbo[pixelIdx + 2] = fbo[pixelIdx + 2] * 0.5 + (finalResult.z / blockDim.x) * 0.5;
+    if(input.constants->clear) { 
+      fbo[pixelIdx]     = (finalResult.x / blockDim.x);
+      fbo[pixelIdx + 1] = (finalResult.y / blockDim.x);
+      fbo[pixelIdx + 2] = (finalResult.z / blockDim.x);
+    } else {
+      fbo[pixelIdx]     += (finalResult.x / blockDim.x);
+      fbo[pixelIdx + 1] += (finalResult.y / blockDim.x);
+      fbo[pixelIdx + 2] += (finalResult.z / blockDim.x);
+    }
   }
 }
 static int jobIdCounter = 0;

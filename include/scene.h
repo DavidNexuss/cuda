@@ -48,6 +48,7 @@ typedef struct
   float             frameTime;
   int               objectCount;
   Object*           objects;
+  int               clear;
 } PushConstants;
 
 /* Execution model
