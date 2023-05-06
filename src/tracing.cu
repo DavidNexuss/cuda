@@ -53,7 +53,6 @@ HEAD unsigned int lHash(unsigned int x) {
 HEAD float3 lAdvance(float3 origin, float3 direction, float distance);
 
 //Retuns a normalized random direction
-HEAD float3 lRandomDirection();
 
 //Retuns a normalized random direction in a hemisphere from normalvector
 HEAD float3 lRrandomDirectionHemisphere(float3 normalvector);
@@ -72,6 +71,7 @@ HEAD float fracf(float x) { return x - floorf(x); }
 HEAD float2 fracf(float2 uv) { return make_float2(fracf(uv.x), fracf(uv.y)); }
 HEAD float lRandom(int magic) {  return fracf(float(magic) * 0.0001); }
 
+HEAD float3 lRandomDirection(int magic) { return lNormalize(make_float3(lRandom(magic), lRandom(magic * 43), lRandom(magic * 51))); }
 HEAD float3 sampleTexture(Texture* text, float2 uv) { 
   uv = fracf(uv);
   unsigned char* rgb = (unsigned char*)text->data;
@@ -171,18 +171,26 @@ void sceneRunCPU(Scene *scene) {
   int  iterationsPerThread = scene->desc.iterationsPerThread;
   dprintf(2, "[CPU %d ] Running path tracing kernel in CPU iterations %d x %d \n", jobId, iterationsPerThread, numThreads);
 
+  int itCount = 4;
   SceneInput inp = sceneInputHost(scene);
 
   for(int i =0; i < scene->desc.framesInFlight; i++) {
     float* fbo = sceneGetFrame(scene, i);
+    #pragma omp parallel for
     for(int x = 0; x < scene->desc.frameBufferWidth; x++) { 
       for(int y = 0; y < scene->desc.frameBufferHeight; y++) { 
+        float3 partial = make_float3(0, 0, 0);
+        for(int j = 0; j < itCount; j++) { 
+          int magicNumber = ((x * scene->desc.frameBufferHeight + y) * scene->desc.frameBufferWidth ) * itCount + i;
+          float3 result = pathTracing(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, numThreads * iterationsPerThread, scene->desc.rayDepth, inp, x, y, i, magicNumber);
+          partial.x += result.x;
+          partial.y += result.y;
+          partial.z += result.z;
+        }
         int pixelIdx = (x* scene->desc.frameBufferWidth + y) * 3;
-        float3 result = pathTracing(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, numThreads * iterationsPerThread, scene->desc.rayDepth, inp, x, y, i, 0);
-
-        fbo[pixelIdx]     = result.x;
-        fbo[pixelIdx + 1] = result.y;
-        fbo[pixelIdx + 2] = result.z;
+        fbo[pixelIdx]     = partial.x;
+        fbo[pixelIdx + 1] = partial.y;
+        fbo[pixelIdx + 2] = partial.z;
       }
     }
   }
