@@ -49,6 +49,7 @@ clean: $(ODIR) $(BIN)
 	rm -rf $(BIN)
 	rm -rf $(SDIR)
 	rm -rf results
+	rm -rf *.out
 
 $(ODIR):
 	mkdir -p $(ODIR)
