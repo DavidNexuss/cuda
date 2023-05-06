@@ -1,11 +1,13 @@
 #pragma once
 
-typedef struct { 
+typedef struct
+{
   void* data;
-  int count;
+  int   count;
 } BufferObject;
 
-typedef struct { 
+typedef struct
+{
   BufferObject vertexBuffer;
   BufferObject indexBuffer;
 } ObjResult;

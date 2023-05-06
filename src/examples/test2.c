@@ -15,7 +15,7 @@ void scene2(Scene* scene) {
     make_float3(0.1, 0.1, 0.1),
     0.1,
     1.01);
-  inp.materials[0].diffuseTexture =0;
+  inp.materials[0].diffuseTexture = 0;
 
   inp.materials[materialIdx++] = materialCreate(
     make_float3(0.8, 0.7, 0.2),
@@ -39,7 +39,7 @@ void scene2(Scene* scene) {
     1.01);
 
   inp.textures[textureIdx++] = textureCreate("assets/checker.png");
-  inp.textures[textureIdx++] = textureCreate("assets/envMap2.png");
+  inp.textures[textureIdx++] = textureCreate("assets/equi2.png");
   inp.textures[textureIdx++] = textureCreate("assets/stone.jpg");
 
   scene->materialCount = materialIdx;

@@ -1,7 +1,8 @@
 #pragma once
 #include "util/buffer.h"
 
-typedef struct {
+typedef struct
+{
   int   width;
   int   height;
   int   channels;

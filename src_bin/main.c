@@ -13,7 +13,7 @@ void programRun(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), 
   //Inits scene materials and meshes
   {
     initScene(&scene);
-    if(!cpu) sceneUpload(&scene);
+    if (!cpu) sceneUpload(&scene);
   }
 
   //Inits scene objects
@@ -27,20 +27,20 @@ void programRun(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), 
       initSceneFrame(constants);
     }
 
-    if(!cpu) sceneUploadObjects(&scene);
+    if (!cpu) sceneUploadObjects(&scene);
   }
 
-  if(!cpu) sceneRun(&scene);
-  if(!cpu) sceneDownload(&scene);
+  if (!cpu) sceneRun(&scene);
+  if (!cpu) sceneDownload(&scene);
 
-  if(cpu) sceneRunCPU(&scene);
-  for(int i = 0; i < sceneDesc.framesInFlight; i++) { 
+  if (cpu) sceneRunCPU(&scene);
+  for (int i = 0; i < sceneDesc.framesInFlight; i++) {
     sceneWriteFrame(&scene, path, i);
   }
   sceneDestroy(&scene);
 }
 
-SceneDesc defaultDesc() { 
+SceneDesc defaultDesc() {
 
   SceneDesc sceneDesc;
   sceneDesc.maxMeshes           = 300;
@@ -59,7 +59,7 @@ SceneDesc defaultDesc() {
   sceneDesc.fWriteClamped       = 1;
   return sceneDesc;
 }
-void test1() { 
+void test1() {
 
   SceneDesc sceneDesc = defaultDesc();
 
@@ -67,22 +67,21 @@ void test1() {
   programRun(sceneDesc, "results/result_gpu.png", defaultScene, defaultSceneLoop, 0);
 
   sceneDesc.frameBufferWidth *= 2;
-  sceneDesc.frameBufferHeight  *= 2;
+  sceneDesc.frameBufferHeight *= 2;
   programRun(sceneDesc, "results/result_cpu_2.png", defaultScene, defaultSceneLoop, 1);
   programRun(sceneDesc, "results/result_gpu_2.png", defaultScene, defaultSceneLoop, 0);
 }
 
-void test2() { 
+void test2() {
 
-  SceneDesc sceneDesc = defaultDesc();
-  sceneDesc.frameBufferWidth = 1024 * 4;
-  sceneDesc.frameBufferHeight = 1024 * 4;
-  sceneDesc.framesInFlight = 1;
-  sceneDesc.fWriteClamped = 1;
+  SceneDesc sceneDesc           = defaultDesc();
+  sceneDesc.frameBufferWidth    = 1280;
+  sceneDesc.frameBufferHeight   = 720;
+  sceneDesc.framesInFlight      = 1;
+  sceneDesc.fWriteClamped       = 1;
   sceneDesc.iterationsPerThread = 32;
-  sceneDesc.numThreads = 16;
-  programRun(sceneDesc, "results/result_gpu_test2.png", scene2, scene2Loop, 0); /*
-  programRun(sceneDesc, "results/result_cpu_test2.png", scene2, scene2Loop, 1); */
+  sceneDesc.numThreads          = 16;
+  programRun(sceneDesc, "results/result_gpu_test2.png", scene2, scene2Loop, 0);
 }
 
 int main(int argc, char** argv) {

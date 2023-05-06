@@ -5,17 +5,19 @@
 #include "objects.h"
 #include "texture.h"
 
-typedef struct {
+typedef struct
+{
   float3 skyColor;
   float3 orizonColor;
   float3 groundColor;
-  int skyTexture;
+  int    skyTexture;
 } RenderingUniforms;
 
 /*
  This struct defines all configurable parameters for class scene
 */
-typedef struct {
+typedef struct
+{
 
   //Satic sized allocated buffers, ugly but comfortable
   int maxObjects;
@@ -36,10 +38,11 @@ typedef struct {
   int   rayDepth;
   float frameDelta;
 
-  int   fWriteClamped;
+  int fWriteClamped;
 } SceneDesc;
 
-typedef struct {
+typedef struct
+{
   RenderingUniforms uniforms;
   Camera            camera;
   float             frameTime;
@@ -66,7 +69,7 @@ typedef struct _Scene {
   Buffer framebuffer;
 
   //Uniforms
-  Buffer* objects; 
+  Buffer* objects;
   Buffer  constants;
 
   int materialCount;
@@ -91,13 +94,14 @@ typedef struct _Scene {
 } Scene;
 
 /* bag of pointers */
-typedef struct {
-  Material*        materials;
-  Mesh*            meshes;
-  Texture*         textures;
-  PushConstants*   constants;
-  BufferObject*    vertexBuffers;
-  BufferObject*    indexBuffers;
+typedef struct
+{
+  Material*      materials;
+  Mesh*          meshes;
+  Texture*       textures;
+  PushConstants* constants;
+  BufferObject*  vertexBuffers;
+  BufferObject*  indexBuffers;
 } SceneInput;
 
 

@@ -3,8 +3,7 @@
 Si tot esta ben configurat, nomes caldria executar per compilar:
 
 ```
-./generate
-./build
+./makeLocal.sh
 ```
 
-I per executar ./build/tga
+I per executar ./tracer
