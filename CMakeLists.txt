@@ -14,12 +14,14 @@ find_package(CUDA)
 set(CMAKE_CUDA_STANDARD 14)
 
 file(GLOB_RECURSE SRC src/*.c src/*.cu)
-add_executable(tga ${SRC})
+add_library(tga ${SRC})
+add_executable(tga_main src_bin/main.c)
 
 # Library setup
 add_subdirectory(lib/stb)
 target_link_libraries(tga PRIVATE stb cuda)
 target_include_directories(tga PUBLIC /opt/cuda/include/ src)
+target_link_libraries(tga_main PRIVATE tga)
 
 # Cuda setup
 include(CheckLanguage)

@@ -22,7 +22,7 @@ Buffer bufferCreate(int size) {
   cudaMalloc((void**)&buffer.D, size);
   return buffer;
 }
-void* bufferCreateImmutable(void* data, int size) {
+void* bufferCreateImmutable(void* data, unsigned long long size) {
   void* buffer;
   cudaMalloc((void**)&buffer, size);
   cudaMemcpy((void*)buffer, data, size, cudaMemcpyHostToDevice);
@@ -71,7 +71,7 @@ void bufferUpload(Buffer* buffer) {
 }
 
 void bufferDownload(Buffer* buffer) {
-  dprintf(2, " <----- downloading %p %d\n", buffer, buffer->allocatedSize);
+  dprintf(2, " <----- downloading %p %lld\n", buffer, buffer->allocatedSize);
   cudaMemcpy((void*)buffer->H, (void*)buffer->D, buffer->allocatedSize, cudaMemcpyDeviceToHost);
 }
 

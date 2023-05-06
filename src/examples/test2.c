@@ -38,7 +38,7 @@ void scene2(Scene* scene) {
     1.01);
 
   inp.textures[textureIdx++] = textureCreate("assets/checker.png");
-  inp.textures[textureIdx++] = textureCreate("assets/envMap.jpg");
+  inp.textures[textureIdx++] = textureCreate("assets/envMap2.png");
   inp.textures[textureIdx++] = textureCreate("assets/stone.jpg");
 
   scene->materialCount = materialIdx;

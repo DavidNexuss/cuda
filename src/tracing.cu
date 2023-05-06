@@ -42,7 +42,13 @@ HEAD float3 lNormalize(float3 v) {
   return make_float3(v.x / len, v.y / len, v.z / len);
 }
 
-HEAD float lRandom() {  }
+HEAD unsigned int lHash(unsigned int x) {
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    return x;
+}
+
 //Returns origin + direction * distance
 HEAD float3 lAdvance(float3 origin, float3 direction, float distance);
 
@@ -64,6 +70,7 @@ HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta, float* n
 
 HEAD float fracf(float x) { return x - floorf(x); }
 HEAD float2 fracf(float2 uv) { return make_float2(fracf(uv.x), fracf(uv.y)); }
+HEAD float lRandom(int magic) {  return fracf(float(magic) * 0.0001); }
 
 HEAD float3 sampleTexture(Texture* text, float2 uv) { 
   uv = fracf(uv);
@@ -71,23 +78,30 @@ HEAD float3 sampleTexture(Texture* text, float2 uv) {
   int x = uv.x * text->width;
   int y = uv.y * text->height;
   
-  int i = (x * text->width + y) * 3;
+  int i = (y * text->width + x) * 3;
   return make_float3(rgb[i] / float(255.0f), rgb[i + 1] / float(255.0f), rgb[i + 2] / float(255.0f));
 }
 
 HEAD float3 sampleEnvMap(Texture* text, float3 rd) {
-  float x = atan2(rd.x, rd.z);
-  float y = atan2(rd.y, rd.x);
-  return sampleTexture(text, make_float2(x, y));
+  float x = atan2(rd.z, rd.x) / (2 * M_PI);
+  float y = 0.5 + atan2(rd.y, sqrt(rd.x * rd.x + rd.z * rd.z)) / (2 * M_PI);
+  return sampleTexture(text, make_float2(x, 1 - y));
 }
 
-HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame) { 
+HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame, int magic) { 
   float2 uv = make_float2((2*y / float(height)) - 1, (2*(width - x) / float(width)) - 1);
   float3 rd = make_float3(uv.x, uv.y, -1);
   float3 ro = make_float3(0,0,0);
   
+  magic = lHash(magic);
+  rd.x = rd.x + lRandom(lHash(magic)) * 0.002;
+  rd.y = rd.y + lRandom(lHash(magic+ 71)) * 0.002;
+  rd.z = rd.z + lRandom(lHash(magic+ 45)) * 0.002;
+
+  rd = lNormalize(rd);
+
   if(rd.y > 0) { 
-    return sampleEnvMap(&input.textures[2], rd);
+    return sampleEnvMap(&input.textures[1], rd);
   }
 
   float floory = -1;
@@ -95,9 +109,9 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
   float3 target = make_float3(ro.x + rd.x * lambda, ro.y + rd.y * lambda, ro.z + rd.z * lambda);
 
-  float3 color = sampleTexture(input.textures, make_float2(target.x, target.z));
+  float3 color = sampleTexture(&input.textures[0], make_float2(target.x, target.z));
   
-  return sum(color, sampleEnvMap(&input.textures[2], lReflect(rd, make_float3(0,1,0))));
+  return sum(color, sampleEnvMap(&input.textures[1], lReflect(rd, make_float3(0,1,0))));
 }
 
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input) {
@@ -107,8 +121,9 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
 
   extern __shared__ float3 sharedResults[];
   float3 partial = make_float3(0,0,0);
+  int tid = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread;
   for(int i = 0; i < iterationsPerThread; i++) { 
-    float3 partialResult = pathTracing(width, height,iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z);
+    float3 partialResult = pathTracing(width, height,iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z, tid + i);
     partial.x += partialResult.x;
     partial.y += partialResult.y;
     partial.z += partialResult.z;
@@ -131,7 +146,6 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
   }
 
 }
-
 static int jobIdCounter = 0;
 void _sceneRun(Scene* scene) { 
   dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, scene->desc.framesInFlight);
@@ -158,12 +172,13 @@ void sceneRunCPU(Scene *scene) {
   dprintf(2, "[CPU %d ] Running path tracing kernel in CPU iterations %d x %d \n", jobId, iterationsPerThread, numThreads);
 
   SceneInput inp = sceneInputHost(scene);
+
   for(int i =0; i < scene->desc.framesInFlight; i++) {
     float* fbo = sceneGetFrame(scene, i);
     for(int x = 0; x < scene->desc.frameBufferWidth; x++) { 
       for(int y = 0; y < scene->desc.frameBufferHeight; y++) { 
         int pixelIdx = (x* scene->desc.frameBufferWidth + y) * 3;
-        float3 result = pathTracing(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, numThreads * iterationsPerThread, scene->desc.rayDepth, inp, x, y, i);
+        float3 result = pathTracing(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, numThreads * iterationsPerThread, scene->desc.rayDepth, inp, x, y, i, 0);
 
         fbo[pixelIdx]     = result.x;
         fbo[pixelIdx + 1] = result.y;
