@@ -15,7 +15,7 @@ void scene2(Scene* scene) {
     make_float3(0.1, 0.1, 0.1),
     0.1,
     1.01);
-  inp.materials[0].diffuseTexture =0;
+  inp.materials[0].diffuseTexture = 0;
 
   inp.materials[materialIdx++] = materialCreate(
     make_float3(0.8, 0.7, 0.2),

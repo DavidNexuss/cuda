@@ -1,7 +1,8 @@
 #pragma once
 
-typedef struct {
-  void *H, *D;
+typedef struct
+{
+  void *             H, *D;
   unsigned long long allocatedSize;
 } Buffer;
 

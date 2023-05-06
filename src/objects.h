@@ -1,7 +1,8 @@
 #pragma once
 #include "util/linear.h"
 // Camera
-typedef struct {
+typedef struct
+{
   float3 origin;
   float3 direction;
   float3 up;
@@ -9,7 +10,8 @@ typedef struct {
 } Camera;
 
 //Object
-typedef struct {
+typedef struct
+{
   int    material;
   int    mesh;
   float3 origin;
@@ -18,7 +20,8 @@ typedef struct {
 Object objectCreate(int material, int mesh, float3 origin);
 
 //Material
-typedef struct {
+typedef struct
+{
   float3 kd;
   float3 ks;
   float3 ka;
@@ -39,18 +42,22 @@ enum MeshType {
 };
 
 // Mesh varidadic type union over different mesh types
-typedef struct {
+typedef struct
+{
   enum MeshType type;
   union {
-    struct {
+    struct
+    {
       float radius;
     } tSphere;
 
-    struct {
+    struct
+    {
       float3 normal;
     } tPlain;
 
-    struct {
+    struct
+    {
       int vertexBufferIndex;
       int indexBufferIndex;
       union {

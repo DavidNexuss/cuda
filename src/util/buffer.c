@@ -6,7 +6,7 @@
 
 // MUTABLE BUFFER, abstraction to handle pairs of host and device buffers
 
-#define KILL dprintf(2, "%d", 0/0)
+#define KILL dprintf(2, "%d", 0 / 0)
 // For error checking and correct memory release
 int gBufferTotalAllocatedSize = 0;
 int gBufferPeakAllocatedSize  = 0;
@@ -33,24 +33,24 @@ void* bufferCreateImmutable(void* data, unsigned long long size) {
 void bufferDestroy(Buffer* buffer) {
   gBufferTotalAllocatedSize -= buffer->allocatedSize;
   if (buffer->H != 0) free(buffer->H);
-  if (buffer->D != 0) { 
-    if(cudaFree((void*)buffer->D) != cudaSuccess) { 
+  if (buffer->D != 0) {
+    if (cudaFree((void*)buffer->D) != cudaSuccess) {
       dprintf(2, "Cuda free error %p!\n", buffer);
       exit(1);
     }
   }
 }
 
-void bufferDestroyImmutable(void* buffer) { 
-  if(buffer == 0) return;
-  if(cudaFree(buffer) != cudaSuccess){ 
+void bufferDestroyImmutable(void* buffer) {
+  if (buffer == 0) return;
+  if (cudaFree(buffer) != cudaSuccess) {
     dprintf(2, "Cuda free immutable error %p!\n", buffer);
     KILL;
   }
 }
 
 void bufferUploadAmount(Buffer* buffer, int amount) {
-  if(amount < -1) { 
+  if (amount < -1) {
     dprintf(2, "Probably doing somehting wrong");
     exit(1);
   }
@@ -66,8 +66,8 @@ void bufferUploadAmount(Buffer* buffer, int amount) {
   cudaMemcpy((void*)buffer->D, (void*)buffer->H, buffer->allocatedSize, cudaMemcpyHostToDevice);
 }
 
-void bufferUpload(Buffer* buffer) { 
-  bufferUploadAmount(buffer, -1); 
+void bufferUpload(Buffer* buffer) {
+  bufferUploadAmount(buffer, -1);
 }
 
 void bufferDownload(Buffer* buffer) {
