@@ -54,7 +54,7 @@ SceneDesc defaultDesc() {
   sceneDesc.numThreads          = 8;
   sceneDesc.iterationsPerThread = 4;
   sceneDesc.rayDepth            = 4;
-  sceneDesc.framesInFlight      = 4;
+  sceneDesc.framesInFlight      = 1;
   sceneDesc.frameDelta          = 0.1;
   sceneDesc.fWriteClamped       = 1;
   return sceneDesc;
@@ -75,12 +75,12 @@ void test1() {
 void test2() {
 
   SceneDesc sceneDesc           = defaultDesc();
-  sceneDesc.frameBufferWidth    = 1280;
-  sceneDesc.frameBufferHeight   = 720;
+  sceneDesc.frameBufferWidth    = 1280 * 4;
+  sceneDesc.frameBufferHeight   = 720 * 4;
   sceneDesc.framesInFlight      = 1;
   sceneDesc.fWriteClamped       = 1;
-  sceneDesc.iterationsPerThread = 32;
-  sceneDesc.numThreads          = 16;
+  sceneDesc.iterationsPerThread = 24;
+  sceneDesc.numThreads          = 32;
   programRun(sceneDesc, "results/result_gpu_test2.png", scene2, scene2Loop, 0);
 }
 

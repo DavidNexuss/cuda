@@ -75,7 +75,7 @@ HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta) {
 
 HEAD float  fracf(float x) { return x - floorf(x); }
 HEAD float2 fracf(float2 uv) { return make_float2(fracf(uv.x), fracf(uv.y)); }
-HEAD float  lRandom(int magic) { return fracf(float(magic) * 0.0001); }
+HEAD float  lRandom(int magic) { return fracf(float(magic) * 0.0001) * 2.0f - 1.0f; }
 
 HEAD float3 lRandomDirection(int magic) { return lNormalize(make_float3(lRandom(magic), lRandom(magic * 43), lRandom(magic * 51))); }
 HEAD float3 sampleTexture(Texture* text, float2 uv) {
@@ -162,11 +162,11 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
     ro = nro;
     rd = nrd;
-
+ 
     magic = lHash(magic);
-    rd.x  = rd.x + lRandom(lHash(magic)) * 0.1;
-    rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.12;
-    rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.12;
+    rd.x  = rd.x + lRandom(lHash(magic)) * 0.02;
+    rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.02;
+    rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.02;
 
     rd = lNormalize(rd);
   }
