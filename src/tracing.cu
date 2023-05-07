@@ -218,11 +218,11 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
 static int jobIdCounter = 0;
 void       _sceneRun(Scene* scene) {
   dim3 numBlocks           = dim3(scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, scene->desc.framesInFlight);
-  dim3 numThreads          = dim3(scene->desc.numThreads, 1, 1);
+  int numThreads           = scene->desc.numThreads;
   int  iterationsPerThread = scene->desc.iterationsPerThread;
   int  jobId               = jobIdCounter;
-  dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads.x, iterationsPerThread);
-  pathTracingKernel<<<numBlocks, numThreads, sizeof(float3) * numThreads.x>>>(numBlocks.x, numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene), lHash(jobIdCounter * 4 + 7));
+  dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
+  pathTracingKernel<<<numBlocks, numThreads, sizeof(float3) * numThreads>>>(numBlocks.x, numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene), lHash(jobIdCounter * 4 + 7));
   dprintf(2, "[CUDA %d ] done\n", jobId);
   jobIdCounter++;
 }
