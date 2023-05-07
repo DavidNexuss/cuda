@@ -162,6 +162,8 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
       return prod(currentColor, sampleEnvMap(skyTexture, rd));
     }
 
+    float fresnel = abs(dot(rd, hitNormal));
+
     float3 nro = lAdvance(ro, rd, delta);
     float3 nrd = lReflect(rd, hitNormal);
 
@@ -177,10 +179,11 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
     ro = nro;
     rd = nrd;
  
+    float specular = currentColor.x * currentColor.x;
     magic = lHash(magic);
-    rd.x  = rd.x + lRandom(lHash(magic)) * 0.02;
-    rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.02;
-    rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.02;
+    rd.x  = rd.x + fresnel * lRandom(lHash(magic)) * 0.2 / specular;
+    rd.y  = rd.y + fresnel * lRandom(lHash(magic + 71)) * 0.2 / specular;
+    rd.z  = rd.z + fresnel * lRandom(lHash(magic + 45)) * 0.2 / specular;
 
     rd = lNormalize(rd);
   }
