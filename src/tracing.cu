@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "cuda/cutil_math.h"
 
 extern "C" {
 #include "../include/scene.h"
@@ -6,9 +7,6 @@ extern "C" {
 
 #define HEAD __host__ __device__
 
-HEAD float dot(float3 a, float3 b) {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
 HEAD float3 prod(float3 a, float3 b) {
   return make_float3(a.x * b.x, a.y * b.y, a.z * b.z);
 }
@@ -65,6 +63,19 @@ HEAD float3 lClearColorBackground(float3 rd, float3 ground, float3 orizon, float
   return sub(prodScalar(sky, t), prodScalar(ground, -t));
 }
 
+HEAD float3 applyMatrix(float3 v, float3 x, float3 y, float3 z) { 
+  return make_float3(
+      v.x * x.x + v.y * y.x + v.z * z.x,
+      v.x * x.y + v.y * y.y + v.z * z.y,
+      v.x * x.z + v.y * y.z + v.z * z.z
+      );
+}
+HEAD float3 rotateVector(float3 rd, float3 y) { 
+  float3 x = make_float3(1,0,0);
+  float3 z = cross(x, y);
+  return applyMatrix(rd, x, y, z);
+
+} 
 //Signed distance field functions combined with direction optimisation whenever possible
 HEAD int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* normal);
 HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta) {
@@ -73,8 +84,6 @@ HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta) {
   return 1;
 }
 
-HEAD float  fracf(float x) { return x - floorf(x); }
-HEAD float2 fracf(float2 uv) { return make_float2(fracf(uv.x), fracf(uv.y)); }
 HEAD float  lRandom(int magic) { return fracf(float(magic) * 0.0001) * 2.0f - 1.0f; }
 
 HEAD float3 lRandomDirection(int magic) { return lNormalize(make_float3(lRandom(magic), lRandom(magic * 43), lRandom(magic * 51))); }
@@ -132,7 +141,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
       switch (meshes[obj->mesh].type) {
         case PLAIN:
           partialNormal = meshes[obj->mesh].tPlain.normal;
-          hitStatus     = sdfHitPlane(ro, rd, make_float3(0, 1, 0), &partialDelta);
+          hitStatus     = sdfHitPlane(ro, rotateVector(rd, partialNormal), make_float3(0, 1, 0), &partialDelta);
           break;
         case SPHERE:
           break;
@@ -178,6 +187,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
   return currentColor;
 }
 
+
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input, int magic) {
 
   int    pixelIdx = (blockIdx.y * width + blockIdx.x) * 3;
@@ -185,33 +195,38 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
 
   extern __shared__ float3 sharedResults[];
   float3                   partial = make_float3(0, 0, 0);
-  int                      tid     = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread + magic;
+  int                      tidMagic     = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread + magic;
   for (int i = 0; i < iterationsPerThread; i++) {
-    float3 partialResult = pathTracing(width, height, iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z, tid + i);
+    float3 partialResult = pathTracing(width, height, iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z, tidMagic + i);
     partial.x += partialResult.x;
     partial.y += partialResult.y;
     partial.z += partialResult.z;
   }
 
-  sharedResults[threadIdx.x] = make_float3(partial.x / iterationsPerThread, partial.y / iterationsPerThread, partial.z / iterationsPerThread);
+  int tid = threadIdx.x;
+  sharedResults[tid] = make_float3(partial.x / iterationsPerThread, partial.y / iterationsPerThread, partial.z / iterationsPerThread);
   __syncthreads();
 
-  //Linear reduction TODO fix this
-  if (threadIdx.x == 0) {
-    float3 finalResult = make_float3(0, 0, 0);
-    for (int i = 0; i < blockDim.x; i++) {
-      finalResult.x += sharedResults[i].x;
-      finalResult.y += sharedResults[i].y;
-      finalResult.z += sharedResults[i].z;
+  for (unsigned int s = 1; s < blockDim.x; s*= 2) {
+    int index = 2 * s * tid;
+    if(index < blockDim.x) { 
+      sharedResults[index].x += sharedResults[index + s].x;
+      sharedResults[index].y += sharedResults[index + s].y;
+      sharedResults[index].z += sharedResults[index + s].z;
     }
+
+    __syncthreads();
+  }
+
+  if(threadIdx.x == 0) {
     if(input.constants->clear) { 
-      fbo[pixelIdx]     = (finalResult.x / blockDim.x);
-      fbo[pixelIdx + 1] = (finalResult.y / blockDim.x);
-      fbo[pixelIdx + 2] = (finalResult.z / blockDim.x);
+      fbo[pixelIdx]     = (sharedResults[0].x / blockDim.x);
+      fbo[pixelIdx + 1] = (sharedResults[0].y / blockDim.x);
+      fbo[pixelIdx + 2] = (sharedResults[0].z / blockDim.x);
     } else {
-      fbo[pixelIdx]     += (finalResult.x / blockDim.x);
-      fbo[pixelIdx + 1] += (finalResult.y / blockDim.x);
-      fbo[pixelIdx + 2] += (finalResult.z / blockDim.x);
+      fbo[pixelIdx]     += (sharedResults[0].x / blockDim.x);
+      fbo[pixelIdx + 1] += (sharedResults[0].y / blockDim.x);
+      fbo[pixelIdx + 2] += (sharedResults[0].z / blockDim.x);
     }
   }
 }

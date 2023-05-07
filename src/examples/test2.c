@@ -7,6 +7,7 @@ void scene2(Scene* scene) {
   int textureIdx  = 0;
 
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 0));
+  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 1));
 
   Material mat;
   inp.materials[materialIdx++] = materialCreate(
@@ -61,6 +62,7 @@ void scene2Loop(PushConstants* cn) {
 
   int objectIdx            = 0;
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, -1, 1));
+  //cn->objects[objectIdx++] = objectCreate(0, 1, make_float3(0, -1, 1));
 
   cn->objectCount = objectIdx;
 }
