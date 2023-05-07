@@ -83,7 +83,6 @@ void traceLoop(PushConstants* cn) {
 
   int objectIdx            = 0;
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, -1, 1));
-  cn->objects[objectIdx++] = objectCreate(1, 1, make_float3(0, -1, 1));
 
   cn->objectCount = objectIdx;
 }
@@ -91,12 +90,13 @@ void traceLoop(PushConstants* cn) {
 #ifdef IMPL
 int main(int argc, char** argv) {
   SceneDesc sceneDesc           = defaultDesc();
-  sceneDesc.frameBufferWidth    = 1280 * 8;
-  sceneDesc.frameBufferHeight   = 720 * 8;
+  sceneDesc.frameBufferWidth    = 1920;
+  sceneDesc.frameBufferHeight   = 1080;
   sceneDesc.framesInFlight      = 1;
   sceneDesc.fWriteClamped       = 1;
-  sceneDesc.iterationsPerThread = 16;
-  sceneDesc.numThreads          = 32;
+  sceneDesc.iterationsPerThread = 2;
+  sceneDesc.numThreads          = 32 * 4;
+
   sceneRunSuite(sceneDesc, "results/result_gpu_test2.png", traceInit, traceLoop, 0);
   bufferDebugStats();
 }
