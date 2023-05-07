@@ -193,3 +193,37 @@ void sceneWriteFrame(Scene* scene, const char* path, int index) {
     stbi_write_hdr(path, scene->desc.frameBufferWidth, scene->desc.frameBufferHeight, 3, sceneGetFrame(scene, index));
   }
 }
+
+void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), int cpu) {
+
+  Scene scene = sceneCreate(sceneDesc);
+
+  //Inits scene materials and meshes
+  {
+    initScene(&scene);
+    if (!cpu) sceneUpload(&scene);
+  }
+
+  //Inits scene objects
+  {
+    SceneInput sc = sceneInputHost(&scene);
+    float      t  = 0;
+
+    for (int i = 0; i < sceneDesc.framesInFlight; i++) {
+      PushConstants* constants = &sc.constants[i];
+      constants->frameTime     = t;
+      initSceneFrame(constants);
+    }
+
+    if (!cpu) sceneUploadObjects(&scene);
+  }
+
+  if (!cpu) sceneRun(&scene);
+  if (!cpu) sceneDownload(&scene);
+
+  if (cpu) sceneRunCPU(&scene);
+  for (int i = 0; i < sceneDesc.framesInFlight; i++) {
+    sceneWriteFrame(&scene, path, i);
+  }
+  sceneDestroy(&scene);
+}

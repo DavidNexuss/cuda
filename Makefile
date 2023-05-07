@@ -13,7 +13,7 @@ ODIR = obj
 IDIR = src
 SDIR = as
 
-OUT = tracer
+OUT = tracer.a
 
 C_SOURCES = $(shell find $(IDIR) -type f -name *.c -printf "%f\n")
 CUDA_SOURCES = $(shell find $(IDIR) -type f -name *.cu -printf "%f\n")
@@ -40,8 +40,8 @@ $(ODIR)/%.o : $(IDIR)/**/%.c
 	mkdir -p obj
 	$(GCC) $(GCC_FLAGS) -c $^ -o $@
 
-$(OUT): $(OBJECTS) $(CUDA_OBJECTS) src_bin/main.c
-	$(NVCC) $(LD_FLAGS) $^ -o $@ 
+$(OUT): $(OBJECTS) $(CUDA_OBJECTS)
+	ar rcs $@ $^ 
 
 
 clean: $(ODIR) $(BIN)
