@@ -77,12 +77,12 @@ void traceLoop(PushConstants* cn) {
   cn->camera.znear     = 0.1f;
 
   cn->camera.up        = make_float3(0, 1, 0);
-  cn->camera.origin    = make_float3(0, 1, 0);
+  cn->camera.origin    = make_float3(0, 0.2, 0);
   cn->camera.direction = make_float3(0, 0, -1);
   cn->camera.crossed   = make_float3(1, 0, 0);
 
   int objectIdx            = 0;
-  cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, -1, 1));
+  cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, 0, 1));
 
   cn->objectCount = objectIdx;
 }
@@ -94,10 +94,10 @@ int main(int argc, char** argv) {
   sceneDesc.frameBufferHeight   = 1080;
   sceneDesc.framesInFlight      = 1;
   sceneDesc.fWriteClamped       = 1;
-  sceneDesc.iterationsPerThread = 2;
-  sceneDesc.numThreads          = 32 * 4;
+  sceneDesc.iterationsPerThread = 1;
+  sceneDesc.numThreads          = 64;
 
-  sceneRunSuite(sceneDesc, "results/result_gpu_test2.png", traceInit, traceLoop, 0);
+  sceneRunSuiteMovie(sceneDesc, "results/frame.png", traceInit, traceLoop);
   bufferDebugStats();
 }
 #endif

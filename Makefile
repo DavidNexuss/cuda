@@ -3,10 +3,10 @@ NVCC         = $(CUDA_HOME)/bin/nvcc
 INCLUDE_DIRS = -I$(CUDA_HOME)/include -I$(CUDA_HOME)/sdk/CUDALibraries/common/inc -I include -I src -I$(CUDA_HOME)/sdk/CUDALibraries/common/lib -I/opt/cuda/include -Iinclude
 
 NVCC_FLAGS_LOCAL = -O3 $(INCLUDE_DIRS)
-NVCC_FLAGS  		 = -O3 -Wno-deprecated-gpu-targets -gencode arch=compute_86,code=sm_86 --ptxas-options=-v $(INCLUDE_DIRS)
+NVCC_FLAGS  		 = -O3 -Wno-deprecated-gpu-targets -gencode arch=compute_86,code=sm_86 --ptxas-options=-v $(INCLUDE_DIRS) -fopenmp
 LD_FLAGS    		 = -lcudart -Xlinker -rpath,$(CUDA_HOME)/lib64 $(INCLUDE_DIRS)
 
-GCC_FLAGS   = -O3 $(INCLUDE_DIRS)
+GCC_FLAGS   = -O3 $(INCLUDE_DIRS) -fopenmp
 
 BIN = bin
 ODIR = obj

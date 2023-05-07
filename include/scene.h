@@ -121,3 +121,4 @@ void sceneRunCPU(Scene* scene);
 void sceneRunCPUMultiThreaded(Scene* scene);
 
 void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), int cpu);
+void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
