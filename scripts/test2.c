@@ -7,9 +7,7 @@ void traceInit(Scene* scene) {
   int textureIdx  = 0;
 
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 0));
-  inp.meshes[meshIdx++] = meshPlain(make_float3(1, 1, 0));
 
-  Material mat;
   inp.materials[materialIdx++] = materialCreate(
     make_float3(0.5, 0.7, 0.8),
     make_float3(0.2, 0.4, 0.5),
@@ -18,30 +16,8 @@ void traceInit(Scene* scene) {
     1.01);
   inp.materials[0].diffuseTexture = 0;
 
-  inp.materials[materialIdx++] = materialCreate(
-    make_float3(0.8, 0.7, 0.2),
-    make_float3(0.2, 0.2, 0.2),
-    make_float3(0.1, 0.1, 0.1),
-    0.0,
-    1.01);
-
-  inp.materials[materialIdx++] = materialCreate(
-    make_float3(10.8, 10.7, 10.2),
-    make_float3(0.2, 0.2, 0.2),
-    make_float3(0.1, 0.1, 0.1),
-    0.0,
-    1.01);
-
-  inp.materials[materialIdx++] = materialCreate(
-    make_float3(0.01, 0.1, 0.2),
-    make_float3(0.8, 1.0, 1.0),
-    make_float3(0.1, 0.1, 0.1),
-    1.0,
-    1.01);
-
   inp.textures[textureIdx++] = textureCreate("assets/stone.jpg");
   inp.textures[textureIdx++] = textureCreate("assets/envMap.jpg");
-  inp.textures[textureIdx++] = textureCreate("assets/checker.png");
 
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;
@@ -62,7 +38,6 @@ void traceLoop(PushConstants* cn) {
 
   int objectIdx            = 0;
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, -1, 1));
-  cn->objects[objectIdx++] = objectCreate(1, 1, make_float3(0, -1, 1));
 
   cn->objectCount = objectIdx;
 }
