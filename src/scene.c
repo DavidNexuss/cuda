@@ -230,16 +230,15 @@ void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*
 
 #include <math.h>
 
-inline __host__ __device__ float3 cross(float3 a, float3 b)
-{ 
-    return make_float3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x); 
+inline __host__ __device__ float3 cross(float3 a, float3 b) {
+  return make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
 }
 void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn)) {
 
-  int simultaneous = 32;
-  int maxIterations = (32 * 3) / simultaneous;
+  int simultaneous         = 32;
+  int maxIterations        = (32 * 3) / simultaneous;
   sceneDesc.framesInFlight = simultaneous;
-  Scene scene = sceneCreate(sceneDesc);
+  Scene scene              = sceneCreate(sceneDesc);
 
   //Inits scene materials and meshes
   {
@@ -247,30 +246,29 @@ void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(S
     sceneUpload(&scene);
   }
 
-  float t  = 0;
-  char buffer[256];
+  float t = 0;
+  char  buffer[256];
   //Inits scene objects
   int f = 0;
-  for(int d = 0; d < maxIterations + 1; d++)
-  {
+  for (int d = 0; d < maxIterations + 1; d++) {
     dprintf(2, "[%d / %d] Running iteration\n", d, maxIterations);
     SceneInput sc = sceneInputHost(&scene);
 
     for (int i = 0; i < sceneDesc.framesInFlight; i++) {
       PushConstants* constants = &sc.constants[i];
       initSceneFrame(constants);
-      constants->frameTime     = t;
+      constants->frameTime        = t;
       constants->camera.direction = make_float3(sin(t), 0, cos(t));
-      constants->camera.crossed = cross(constants->camera.up, constants->camera.direction);
-      constants->clear = 1;
+      constants->camera.crossed   = cross(constants->camera.up, constants->camera.direction);
+      constants->clear            = 1;
       t += 0.01f;
     }
 
     sceneUploadObjects(&scene);
     sceneRun(&scene);
 
-    if(d != 0) { 
-      #pragma omp parallel for
+    if (d != 0) {
+#pragma omp parallel for
       for (int i = 0; i < sceneDesc.framesInFlight; i++) {
         sprintf(buffer, "%s_%03d.png", path, f + i);
         sceneWriteFrame(&scene, buffer, i);

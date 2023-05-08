@@ -1,25 +1,4 @@
 #include <scene.h>
-
-static SceneDesc defaultDesc() {
-
-  SceneDesc sceneDesc;
-  sceneDesc.maxMeshes           = 300;
-  sceneDesc.maxObjects          = 400;
-  sceneDesc.maxMaterials        = 300;
-  sceneDesc.maxTextures         = 10;
-  sceneDesc.maxVertexBuffer     = 10;
-  sceneDesc.maxIndexBuffer      = 10;
-  sceneDesc.frameBufferWidth    = 1024;
-  sceneDesc.frameBufferHeight   = 1024;
-  sceneDesc.numThreads          = 8;
-  sceneDesc.iterationsPerThread = 4;
-  sceneDesc.rayDepth            = 4;
-  sceneDesc.framesInFlight      = 1;
-  sceneDesc.frameDelta          = 0.1;
-  sceneDesc.fWriteClamped       = 1;
-  return sceneDesc;
-}
-
 void traceInit(Scene* scene) {
   SceneInput inp = sceneInputHost(scene);
 
@@ -74,7 +53,7 @@ void traceLoop(PushConstants* cn) {
   cn->uniforms.groundColor = make_float3(0.2, 0.2, 0.2);
   cn->uniforms.orizonColor = make_float3(0.7, 0.8, 0.9);
   cn->uniforms.skyTexture  = 1;
-  cn->camera.znear     = 0.1f;
+  cn->camera.znear         = 0.1f;
 
   cn->camera.up        = make_float3(0, 1, 0);
   cn->camera.origin    = make_float3(0, 1, 0);
@@ -87,17 +66,3 @@ void traceLoop(PushConstants* cn) {
 
   cn->objectCount = objectIdx;
 }
-
-#ifdef IMPL
-int main(int argc, char** argv) {
-  SceneDesc sceneDesc           = defaultDesc();
-  sceneDesc.frameBufferWidth    = 1280 * 2;
-  sceneDesc.frameBufferHeight   = 720 * 2;
-  sceneDesc.framesInFlight      = 1;
-  sceneDesc.fWriteClamped       = 1;
-  sceneDesc.iterationsPerThread = 16;
-  sceneDesc.numThreads          = 32;
-  sceneRunSuite(sceneDesc, "results/result_gpu_test2.png", traceInit, traceLoop, 0);
-  bufferDebugStats();
-}
-#endif
