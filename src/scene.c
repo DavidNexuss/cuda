@@ -230,7 +230,7 @@ void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*
 
 #include <math.h>
 
-inline __host__ __device__ float3 cross(float3 a, float3 b) {
+inline static __host__ __device__ float3 cross(float3 a, float3 b) {
   return make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
 }
 void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn)) {
