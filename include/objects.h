@@ -39,7 +39,8 @@ Material materialCreate(float3 kd, float3 ks, float3 ka, float fresnel, float io
 enum MeshType {
   PLAIN,
   SPHERE,
-  MESH
+  MESH,
+  CUSTOM
 };
 
 // Mesh varidadic type union over different mesh types
@@ -66,6 +67,11 @@ typedef struct
         int indexCount;
       };
     } tMesh;
+
+    struct {
+      int immutableBuffer;
+      int (*functionPointer)(float3, float3, float*);
+    } tCustom;
   };
 } Mesh;
 
