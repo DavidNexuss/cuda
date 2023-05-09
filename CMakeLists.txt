@@ -15,13 +15,10 @@ set(CMAKE_CUDA_STANDARD 14)
 
 file(GLOB_RECURSE SRC src/*.c src/*.cu)
 add_library(tga ${SRC})
-add_executable(tga_main src_bin/main.c)
 
 # Library setup
-add_subdirectory(lib/stb)
-target_link_libraries(tga PRIVATE stb cuda)
-target_include_directories(tga PUBLIC /opt/cuda/include/ src)
-target_link_libraries(tga_main PRIVATE tga)
+target_link_libraries(tga PRIVATE cuda)
+target_include_directories(tga PUBLIC /opt/cuda/include/ src include)
 
 # Cuda setup
 include(CheckLanguage)
@@ -44,3 +41,12 @@ if( supported )
 else()
     message(STATUS "IPO / LTO not supported: <${error}>")
 endif()
+
+
+add_executable(test1 scripts/test1.c scripts/runFrame.c)
+target_include_directories(test1 PRIVATE include)
+target_link_libraries(test1 tga cuda)
+
+add_executable(test2 scripts/test2.c scripts/runFrame.c)
+target_include_directories(test2 PRIVATE include)
+target_link_libraries(test2 tga cuda)
