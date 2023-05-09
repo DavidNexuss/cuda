@@ -126,3 +126,6 @@ void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*
 void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), void(callback)(Scene*, int, const char* path));
 void sceneRunSuiteMovieFrames(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
 void sceneRunSuiteMovieEncode(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
+
+
+void sceneScanDevices();
