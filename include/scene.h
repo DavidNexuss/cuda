@@ -92,6 +92,9 @@ typedef struct _Scene {
   int indexBufferCount;
   int textureCount;
 
+  int _backendNeedsUpdate;
+  int _backendNeedsObjectUpdate;
+
 } Scene;
 
 /* bag of pointers */
@@ -106,6 +109,7 @@ typedef struct
 } SceneInput;
 
 
+void           hintUseWindow(int fUseWindow);
 Scene          sceneCreate(SceneDesc desc);
 SceneInput     sceneInputHost(Scene* scene);
 SceneInput     sceneInputDevice(Scene* scene);
