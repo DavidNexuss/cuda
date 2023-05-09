@@ -277,11 +277,18 @@ void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(S
   sceneDestroy(&scene);
 }
 
+#ifdef USE_OMP
 #include "omp.h"
+#else
+int omp_get_thread_num() { return 0; }
+int omp_get_max_threads() { return 1; }
+#endif
 static void callback(Scene* scene, int f, const char* path) {
   char buffer[omp_get_max_threads()][512];
 
+#ifdef USE_OMP
 #pragma omp parallel for
+#endif 
   for (int i = 0; i < scene->desc.framesInFlight; i++) {
     int tid = omp_get_thread_num();
     sprintf(buffer[tid], "%s_%03d.png", path, f + i);
