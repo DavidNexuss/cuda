@@ -42,7 +42,7 @@ enum MeshType {
   MESH,
   CUSTOM
 };
-
+typedef int (*sdfFunction)(float3 ro, float3 rd, float* delta);
 // Mesh varidadic type union over different mesh types
 typedef struct
 {
@@ -69,11 +69,12 @@ typedef struct
     } tMesh;
 
     struct {
-      int immutableBuffer;
-      int (*functionPointer)(float3, float3, float*);
+      int         immutableBuffer;
+      sdfFunction sdf;
     } tCustom;
   };
 } Mesh;
 
 Mesh meshPlain(float3 normal);
 Mesh meshSphere(float radius);
+Mesh meshCustom(sdfFunction function);

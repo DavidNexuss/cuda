@@ -76,7 +76,7 @@ HEAD float3 rotateVector(float3 rd, float3 y) {
 }
 //Signed distance field functions combined with direction optimisation whenever possible
 HEAD int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* normal);
-HEAD int sdfHitPlane(float3 ro, float3 rd, float3 normal, float* delta) {
+HEAD int sdfHitPlane(float3 ro, float3 rd, float* delta) {
   if (rd.y > 0.0f) return 0;
   *delta = ro.y / rd.y;
   return 1;
@@ -135,19 +135,20 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
       Object* obj = &constants->objects[i];
       float   partialDelta;
       float3  partialNormal;
-      int     hitStatus;
-      Mesh*   mesh = &meshes[obj->mesh];
+      int     hitStatus = 0;
+      Mesh*   mesh      = &meshes[obj->mesh];
       switch (mesh->type) {
         case PLAIN:
           partialNormal = mesh->tPlain.normal;
-          hitStatus     = sdfHitPlane(ro, rotateVector(rd, partialNormal), make_float3(0, 1, 0), &partialDelta);
+          hitStatus     = sdfHitPlane(ro, rotateVector(rd, partialNormal), &partialDelta);
           break;
         case SPHERE:
           break;
         case MESH:
           break;
         case CUSTOM:
-          hitStatus = mesh->tCustom.functionPointer(ro, rd, &partialDelta);
+          hitStatus = (*mesh->tCustom.sdf)(ro, rd, &partialDelta);
+          break;
       }
 
       if (hitStatus == 1) {
@@ -198,8 +199,10 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
   float* fbo      = &fbo_mat[blockIdx.z * width * height * 3];
 
   extern __shared__ float3 sharedResults[];
-  float3                   partial  = make_float3(0, 0, 0);
-  int                      tidMagic = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread + magic;
+
+  float3 partial  = make_float3(0, 0, 0);
+  int    tidMagic = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread + magic;
+
   for (int i = 0; i < iterationsPerThread; i++) {
     float3 partialResult = pathTracing(width, height, iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z, tidMagic + i);
     partial.x += partialResult.x;

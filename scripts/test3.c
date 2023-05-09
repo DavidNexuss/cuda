@@ -1,4 +1,5 @@
 #include <scene.h>
+
 void traceInit(Scene* scene) {
   SceneInput inp = sceneInputHost(scene);
 
@@ -16,19 +17,16 @@ void traceInit(Scene* scene) {
     1.01);
   inp.materials[0].diffuseTexture = 0;
 
+
   inp.textures[textureIdx++] = textureCreate("assets/checker.png");
-  inp.textures[textureIdx++] = textureCreate("assets/equi2.png");
+  inp.textures[textureIdx++] = textureCreate("assets/envMap.jpg");
+  inp.textures[textureIdx++] = textureCreate("assets/stone.jpg");
 
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;
   scene->textureCount  = textureIdx;
 }
 
-#include <math.h>
-
-inline static __host__ float3 cross(float3 a, float3 b) {
-  return make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
-}
 void traceLoop(PushConstants* cn) {
   cn->uniforms.skyColor    = make_float3(0.2, 0.4, 0.9);
   cn->uniforms.groundColor = make_float3(0.2, 0.2, 0.2);
@@ -45,8 +43,4 @@ void traceLoop(PushConstants* cn) {
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, 0, 1));
 
   cn->objectCount = objectIdx;
-
-  float t              = cn->frameTime;
-  cn->camera.direction = make_float3(sin(t), 0, cos(t));
-  cn->camera.crossed   = cross(cn->camera.up, cn->camera.direction);
 }

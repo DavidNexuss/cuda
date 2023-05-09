@@ -29,3 +29,10 @@ Mesh meshSphere(float radius) {
   m.tSphere.radius = radius;
   return m;
 }
+
+Mesh meshCustom(sdfFunction function) {
+  Mesh mes;
+  mes.type        = CUSTOM;
+  mes.tCustom.sdf = function;
+  return mes;
+}

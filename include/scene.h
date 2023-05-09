@@ -106,19 +106,23 @@ typedef struct
 } SceneInput;
 
 
-Scene      sceneCreate(SceneDesc desc);
-SceneInput sceneInputHost(Scene* scene);
-SceneInput sceneInputDevice(Scene* scene);
-void       sceneDestroy(Scene* scene);
-void       sceneUpload(Scene* scene);
-void       sceneUploadObjects(Scene* scene);
-void       sceneDownload(Scene* scene);
-float*     sceneGetFrame(Scene* scene, int index);
-void       sceneWriteFrame(Scene* scene, const char* path, int index);
+Scene          sceneCreate(SceneDesc desc);
+SceneInput     sceneInputHost(Scene* scene);
+SceneInput     sceneInputDevice(Scene* scene);
+void           sceneDestroy(Scene* scene);
+void           sceneUpload(Scene* scene);
+void           sceneUploadObjects(Scene* scene);
+void           sceneDownload(Scene* scene);
+float*         sceneGetFrame(Scene* scene, int index);
+void           sceneWriteFrame(Scene* scene, const char* path, int index);
+unsigned char* scenePng(Scene* scene, int index);
 
 void sceneRun(Scene* scene);
 void sceneRunCPU(Scene* scene);
 void sceneRunCPUMultiThreaded(Scene* scene);
 
 void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), int cpu);
-void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
+
+void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), void(callback)(Scene*, int, const char* path));
+void sceneRunSuiteMovieFrames(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
+void sceneRunSuiteMovieEncode(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
