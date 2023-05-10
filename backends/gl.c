@@ -24,7 +24,7 @@ void* windowCreate(int width, int height) {
     return 0;
   }
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   void* window = glfwCreateWindow(width, height, "PathTracing", NULL, NULL);
@@ -68,12 +68,12 @@ GLuint loadProgram(const char* vs, const char* fs) {
   const char* FragmentSourcePointer = readFile(fs);
 
   if (VertexSourcePointer == 0) {
-    ERROR("Error reading vertex shader");
+    ERROR("Error reading vertex shader %s \n", vs);
     return -1;
   }
 
   if (FragmentSourcePointer == 0) {
-    ERROR("Error reading fragment shader");
+    ERROR("Error reading fragment shader %s \n", fs);
     return -1;
   }
 
@@ -144,10 +144,6 @@ typedef struct _Renderer {
   GLuint* vbos;
   GLuint* fbos;
 
-  int numTextures;
-  int numVbos;
-  int numPbos;
-
   GLuint vboPlain;
   GLuint vboCube;
   GLuint vboEnv;
@@ -173,10 +169,11 @@ Renderer* rendererCreate(RendererDesc desc) {
     ERROR("Failed creating window.\n");
     exit(1);
   }
-  renderer->textures = (GLuint*)calloc(MAX_OBJECTS, sizeof(GLuint*));
-  renderer->vbos     = (GLuint*)calloc(MAX_OBJECTS, sizeof(GLuint*));
-  renderer->fbos     = (GLuint*)calloc(MAX_OBJECTS, sizeof(GLuint*));
+  renderer->textures = (GLuint*)malloc(MAX_OBJECTS * sizeof(GLuint*));
+  renderer->vbos     = (GLuint*)malloc(MAX_OBJECTS * sizeof(GLuint*));
+  renderer->fbos     = (GLuint*)malloc(MAX_OBJECTS * sizeof(GLuint*));
 
+  glGenTextures(MAX_OBJECTS, renderer->textures);
   glGenBuffers(1, &renderer->vboPlain);
   glGenBuffers(1, &renderer->vboCube);
   glGenBuffers(1, &renderer->vboEnv);
@@ -190,8 +187,6 @@ Renderer* rendererCreate(RendererDesc desc) {
 }
 
 void rendererUpload(Renderer* renderer, Scene* scene) {
-  renderer->numTextures = scene->textureCount;
-  glGenTextures(scene->textureCount, renderer->textures);
   Texture* textureTable = (Texture*)scene->texturesTable.H;
   for (int i = 0; i < scene->textureCount; i++) {
     glBindTexture(GL_TEXTURE_2D, renderer->textures[i]);
@@ -202,9 +197,7 @@ void rendererUpload(Renderer* renderer, Scene* scene) {
 }
 void rendererDestoy(Renderer* renderer) {
 
-  for (int i = 0; i < renderer->numTextures; i++) {
-    glDeleteTextures(renderer->numTextures, renderer->textures);
-  }
+  glDeleteTextures(MAX_OBJECTS, renderer->textures);
 
   free(renderer->textures);
   free(renderer->vbos);
@@ -215,6 +208,8 @@ void rendererDestoy(Renderer* renderer) {
 }
 
 void rendererDraw(Renderer* renderer, Scene* scene) {
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(renderer->programPbr);
 
   SceneInput in = sceneInputHost(scene);
@@ -226,4 +221,10 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
     for (int d = 0; d < cn->objectCount; d++) {
     }
   }
+}
+
+int rendererPollEvents(Renderer* renderer) {
+  glfwSwapBuffers(renderer->window);
+  glfwPollEvents();
+  return glfwWindowShouldClose(renderer->window);
 }
