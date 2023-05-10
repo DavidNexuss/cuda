@@ -54,7 +54,7 @@ void windowDestroy(GLFWwindow* window) {}
 
 GLuint loadProgram(const char* vs, const char* fs) {
 
-  char errorBuffer[512];
+  char errorBuffer[2048];
 
   GLuint VertexShaderID   = glCreateShader(GL_VERTEX_SHADER);
   GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
@@ -86,6 +86,7 @@ GLuint loadProgram(const char* vs, const char* fs) {
 
   if (InfoLogLength > 0) {
     glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, errorBuffer);
+    ERROR("Error loading vertex shader %s : \n%s\n", vs, errorBuffer);
     free((void*)VertexSourcePointer);
     free((void*)FragmentSourcePointer);
     return 0;
@@ -101,6 +102,7 @@ GLuint loadProgram(const char* vs, const char* fs) {
 
   if (InfoLogLength > 0) {
     glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, errorBuffer);
+    ERROR("Error loading fragment shader %s : \n%s\n", fs, errorBuffer);
     free((void*)VertexSourcePointer);
     free((void*)FragmentSourcePointer);
     return 0;
