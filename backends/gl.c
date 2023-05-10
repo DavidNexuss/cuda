@@ -5,7 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mesh.h"
-#define ERROR(X) (void*)dprintf(2, X)
+#include "util.h"
+#include "backend.h"
+
+#define ERROR(...) dprintf(2, __VA_ARGS__)
 
 #define MAX_OBJECTS 512
 
@@ -16,32 +19,40 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 
 void* windowCreate(int width, int height) {
 
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // We want OpenGL 3.3
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_DECORATED, 0);
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
+  if (glfwInit() != GLFW_TRUE) {
+    ERROR("Failed to start GLFW .\n");
+    return 0;
+  }
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  void* window = glfwCreateWindow(width, height, "PathTracing", NULL, window);
+  void* window = glfwCreateWindow(width, height, "PathTracing", NULL, NULL);
 
-  if (window == 0) {
-    return ERROR("Failed to open GLFW window.");
+  if (window == NULL) {
+    ERROR("Failed to open GLFW window. width: %d height: %d\n", width, height);
+    return 0;
   }
 
-  initialize_GLEW(window);
+  glfwMakeContextCurrent(window);
+  if (glewInit() != GLEW_OK) {
+    ERROR("Failed to initialize glew");
+    return 0;
+  }
 
   glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
   glfwSetWindowSizeCallback(window, window_size_callback);
   glfwSetCursorPosCallback(window, cursor_position_callback);
   glfwSetScrollCallback(window, scroll_callback);
   glfwSetKeyCallback(window, key_callback);
+
+  dprintf(2, "Window created with %d %d\n", width, height);
   return window;
 }
 
 void windowDestroy(GLFWwindow* window) {}
 
-const char* readFile(const char* path);
-GLuint      loadProgram(const char* vs, const char* fs) {
+GLuint loadProgram(const char* vs, const char* fs) {
 
   char errorBuffer[512];
 
@@ -56,6 +67,16 @@ GLuint      loadProgram(const char* vs, const char* fs) {
   const char* VertexSourcePointer   = readFile(vs);
   const char* FragmentSourcePointer = readFile(fs);
 
+  if (VertexSourcePointer == 0) {
+    ERROR("Error reading vertex shader");
+    return -1;
+  }
+
+  if (FragmentSourcePointer == 0) {
+    ERROR("Error reading fragment shader");
+    return -1;
+  }
+
   glShaderSource(VertexShaderID, 1, &VertexSourcePointer, NULL);
   glCompileShader(VertexShaderID);
 
@@ -65,6 +86,8 @@ GLuint      loadProgram(const char* vs, const char* fs) {
 
   if (InfoLogLength > 0) {
     glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, errorBuffer);
+    free((void*)VertexSourcePointer);
+    free((void*)FragmentSourcePointer);
     return 0;
   }
 
@@ -78,11 +101,10 @@ GLuint      loadProgram(const char* vs, const char* fs) {
 
   if (InfoLogLength > 0) {
     glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, errorBuffer);
+    free((void*)VertexSourcePointer);
+    free((void*)FragmentSourcePointer);
     return 0;
   }
-
-  // Link the program
-  //printf("Linking program\n");
 
   GLuint ProgramID = glCreateProgram();
   glAttachShader(ProgramID, VertexShaderID);
@@ -95,6 +117,8 @@ GLuint      loadProgram(const char* vs, const char* fs) {
 
   if (InfoLogLength > 0) {
     glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, errorBuffer);
+    free((void*)VertexSourcePointer);
+    free((void*)FragmentSourcePointer);
     return 0;
   }
 
@@ -110,12 +134,7 @@ GLuint      loadProgram(const char* vs, const char* fs) {
   return ProgramID;
 }
 
-typedef struct {
-  int width;
-  int height;
-} RendererDesc;
-
-typedef struct {
+typedef struct _Renderer {
   void*        window;
   int          hintWindow;
   RendererDesc desc;
@@ -143,14 +162,17 @@ typedef struct {
 } Renderer;
 
 
-Renderer gRenderer;
-int      initialized;
+GLfloat* linearViewMatrix(float3 origin, float3 direction) {}
+GLfloat* rendererProjMatrix(Renderer* renderer) {}
 
-void rendererInit(Renderer* renderer) {
-  if (renderer->hintWindow) {
-    renderer->window = windowCreate(renderer->desc.width, renderer->desc.height);
+Renderer* rendererCreate(RendererDesc desc) {
+  Renderer* renderer = (Renderer*)calloc(1, sizeof(Renderer));
+  renderer->desc     = desc;
+  renderer->window   = windowCreate(renderer->desc.width, renderer->desc.height);
+  if (renderer->window == NULL) {
+    ERROR("Failed creating window.\n");
+    exit(1);
   }
-
   renderer->textures = (GLuint*)calloc(MAX_OBJECTS, sizeof(GLuint*));
   renderer->vbos     = (GLuint*)calloc(MAX_OBJECTS, sizeof(GLuint*));
   renderer->fbos     = (GLuint*)calloc(MAX_OBJECTS, sizeof(GLuint*));
@@ -164,6 +186,7 @@ void rendererInit(Renderer* renderer) {
   glBufferData(GL_ARRAY_BUFFER, sizeof(mesh_plain), mesh_plain, GL_STATIC_DRAW);
 
   renderer->programPbr = loadProgram("assets/pbr.vs", "assets/pbr.fs");
+  return renderer;
 }
 
 void rendererUpload(Renderer* renderer, Scene* scene) {
@@ -187,11 +210,9 @@ void rendererDestoy(Renderer* renderer) {
   free(renderer->vbos);
   free(renderer->fbos);
 
+  glfwTerminate();
   windowDestroy(renderer->window);
 }
-
-GLfloat* linearViewMatrix(float3 origin, float3 direction) {}
-GLfloat* rendererProjMatrix(Renderer* renderer) {}
 
 void rendererDraw(Renderer* renderer, Scene* scene) {
   glUseProgram(renderer->programPbr);
@@ -204,20 +225,5 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
     glUniformMatrix4fv(renderer->programPbrProjMat, 1, 0, rendererProjMatrix(renderer));
     for (int d = 0; d < cn->objectCount; d++) {
     }
-  }
-}
-
-int sceneRunGL(Scene* scene) {
-  if (!initialized) {
-    rendererInit(&gRenderer);
-    initialized = 1;
-  }
-  if (scene->_backendNeedsUpdate) {
-    rendererUpload(&gRenderer, scene);
-    scene->_backendNeedsUpdate = 0;
-  }
-
-  if (scene->_backendNeedsObjectUpdate) {
-    scene->_backendNeedsObjectUpdate = 0;
   }
 }

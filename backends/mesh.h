@@ -1,3 +1,4 @@
+#include <math.h>
 static float mesh_plain[] = {
   /*POSITION*/ 0, 0, 0, /*NORMAL*/ 0, 1, 0,
   /*POSITION*/ 0, 0, 1, /*NORMAL*/ 0, 1, 0,
@@ -15,4 +16,6 @@ float* mesh_uv_sphere(int rings, int segments) {
       float z = sin(j);
     }
   }
+
+  return 0;
 }
