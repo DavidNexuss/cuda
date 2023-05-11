@@ -1,5 +1,9 @@
 #pragma once
 #include "util/linear.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 // Camera
 typedef struct
 {
@@ -62,10 +66,8 @@ typedef struct
     {
       int vertexBufferIndex;
       int indexBufferIndex;
-      union {
-        int vertexCount;
-        int indexCount;
-      };
+      int vertexCount;
+      int indexCount;
     } tMesh;
 
     struct {
@@ -78,3 +80,7 @@ typedef struct
 Mesh meshPlain(float3 normal);
 Mesh meshSphere(float radius);
 Mesh meshCustom(sdfFunction function);
+
+#ifdef __cplusplus
+}
+#endif
