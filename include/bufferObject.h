@@ -1,5 +1,7 @@
 #pragma once
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef struct
 {
   void* data;
@@ -13,3 +15,6 @@ typedef struct
 } ObjResult;
 
 ObjResult createBufferObject(const char*);
+#ifdef __cplusplus
+}
+#endif

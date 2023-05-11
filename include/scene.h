@@ -4,6 +4,9 @@
 #include "bufferObject.h"
 #include "objects.h"
 #include "texture.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct
 {
@@ -120,6 +123,8 @@ void           sceneDownload(Scene* scene);
 float*         sceneGetFrame(Scene* scene, int index);
 void           sceneWriteFrame(Scene* scene, const char* path, int index);
 unsigned char* scenePng(Scene* scene, int index);
+int            sceneLoadOBJ(const char* path, Scene* scene);
+
 
 void sceneRun(Scene* scene);
 void sceneRunCPU(Scene* scene);
@@ -130,3 +135,6 @@ void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*
 void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), void(callback)(Scene*, int, const char* path));
 void sceneRunSuiteMovieFrames(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
 void sceneRunSuiteMovieEncode(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn));
+#ifdef __cplusplus
+}
+#endif

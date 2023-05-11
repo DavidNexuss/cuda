@@ -6,10 +6,10 @@ static SceneDesc defaultDesc() {
   SceneDesc sceneDesc;
   sceneDesc.maxMeshes           = 300;
   sceneDesc.maxObjects          = 400;
-  sceneDesc.maxMaterials        = 300;
-  sceneDesc.maxTextures         = 10;
-  sceneDesc.maxVertexBuffer     = 10;
-  sceneDesc.maxIndexBuffer      = 10;
+  sceneDesc.maxMaterials        = 400;
+  sceneDesc.maxTextures         = 400;
+  sceneDesc.maxVertexBuffer     = 400;
+  sceneDesc.maxIndexBuffer      = 400;
   sceneDesc.frameBufferWidth    = 1024;
   sceneDesc.frameBufferHeight   = 1024;
   sceneDesc.numThreads          = 8;
@@ -37,14 +37,18 @@ int main(int argc, char** argv) {
   rendererDesc.width  = 1080;
   rendererDesc.height = 720;
 
-  Scene     scene    = sceneCreate(sceneDesc);
-  Renderer* renderer = rendererCreate(rendererDesc);
-
+  Scene scene = sceneCreate(sceneDesc);
   traceInit(&scene);
+
+  SceneInput in          = sceneInputHost(&scene);
+  int        objectCount = in.constants->objectCount;
+
+  Renderer* renderer = rendererCreate(rendererDesc);
   rendererUpload(renderer, &scene);
   do {
     SceneInput in = sceneInputHost(&scene);
     for (int i = 0; i < scene.desc.framesInFlight; i++) {
+      (in.constants + i)->objectCount = objectCount;
       traceLoop(in.constants + i);
     }
     rendererDraw(renderer, &scene);

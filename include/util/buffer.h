@@ -1,5 +1,7 @@
 #pragma once
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef struct
 {
   void *             H, *D;
@@ -15,3 +17,6 @@ void   bufferUpload(Buffer* buffer);
 void   bufferDownload(Buffer* buffer);
 
 void bufferDebugStats();
+#ifdef __cplusplus
+}
+#endif

@@ -1,6 +1,8 @@
 #pragma once
 #include "util/buffer.h"
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef struct
 {
   int   width;
@@ -12,3 +14,6 @@ typedef struct
 
 Texture textureCreate(const char* texturePath);
 void    textureDestroy(Texture* text);
+#ifdef __cplusplus
+}
+#endif
