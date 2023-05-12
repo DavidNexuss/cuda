@@ -15,6 +15,7 @@ void      rendererUpload(Renderer* renderer, Scene* scene);
 void      rendererDestoy(Renderer* renderer);
 void      rendererDraw(Renderer* renderer, Scene* scene);
 int       rendererPollEvents(Renderer* renderer);
+void      rendererUploadObjects(Renderer* renderer, Scene* scene);
 
 #define VERTEX_SIZE (3 + 3 + 2)
 #ifdef __cplusplus

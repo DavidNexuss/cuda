@@ -55,6 +55,12 @@ void window_size_callback(GLFWwindow* window, int width, int height) {
 void cursor_position_callback(GLFWwindow* window, double x, double y) {
   xpos = x / (float)windowWidth;
   ypos = y / (float)windowHeight;
+
+  xpos -= 0.5;
+  ypos -= 0.5;
+
+  xpos *= 2 * M_PI;
+  ypos *= 2 * M_PI;
 }
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {}
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -226,6 +232,8 @@ typedef struct _Renderer {
   float3 camPos;
   float3 camDir;
 
+  bool firstFrame;
+
 } Renderer;
 
 
@@ -283,7 +291,7 @@ mat4* meshTransformPlaneScreen() {
   return &plane;
 }
 
-void camUpdate(float3* cam) {
+void camUpdate(float3* cam, float3* dir) {
   float  mag   = 0.1;
   float3 speed = make_float3((keyboard['A'] - keyboard['D']), keyboard[GLFW_KEY_SPACE] - keyboard[GLFW_KEY_LEFT_SHIFT], (keyboard['W'] - keyboard['S']));
   glm_normalize(&speed.x);
@@ -291,6 +299,10 @@ void camUpdate(float3* cam) {
   cam->x += speed.x * mag;
   cam->y += speed.y * mag;
   cam->z += speed.z * mag;
+
+  dir->x = cos(xpos);
+  dir->y = sin(ypos);
+  dir->z = sin(xpos);
 }
 
 void setVertexAttribs() {
@@ -362,6 +374,7 @@ Renderer* rendererCreate(RendererDesc desc) {
 
   renderer->camPos = make_float3(0, 1, 0);
   renderer->camDir = make_float3(0, 0, -1);
+  renderer->firstFrame = true;
 
   dprintf(2, "[Renderer] Render create completed.\n");
   return renderer;
@@ -401,13 +414,15 @@ void rendererUpload(Renderer* renderer, Scene* scene) {
     }
   }
 
-
-  //TODO: Remove this
-  SceneInput in      = sceneInputHost(scene);
-  renderer->camPos   = in.constants->camera.origin;
-  renderer->camPos.y = 1;
-
   dprintf(2, "[Renderer] Render upload completed.\n");
+}
+void rendererUploadObjects(Renderer* renderer, Scene* scene) { 
+  if(renderer->firstFrame) {
+    SceneInput in      = sceneInputHost(scene);
+    renderer->camPos   = in.constants->camera.origin;
+    renderer->camPos.y = 1;
+    renderer->firstFrame = 0;
+  }
 }
 void rendererDestoy(Renderer* renderer) {
 
@@ -501,9 +516,7 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
   SceneInput in = sceneInputHost(scene);
   for (int i = 0; i < scene->desc.framesInFlight; i++) {
     PushConstants* cn = in.constants;
-    camUpdate(&renderer->camPos);
-
-    renderer->camDir = make_float3(0, 0, 1);
+    camUpdate(&renderer->camPos, &renderer->camDir);
     glm_normalize(&renderer->camDir.x);
 
     float* viewMat = (float*)*linearViewMatrix(renderer->camPos, renderer->camDir);

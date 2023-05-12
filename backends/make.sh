@@ -6,5 +6,4 @@ cmake . -B build
 cd build
 make -j4
 cd ../../..
-nvcc -g -c loader.cpp -I ../include
-ar rcs backend.a loader.o
+make

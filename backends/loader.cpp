@@ -170,9 +170,9 @@ static void processNode(aiNode* node, const aiScene* scene, Scene* tracerScene, 
       node->mTransformation.Decompose(scale, rot, pos);
       cn->objects[obj].mesh     = meshTracer;
       cn->objects[obj].material = materialTrace;
-      cn->objects[obj].origin   = make_float3(pos.x, pos.y, pos.z); /*
+      cn->objects[obj].origin   = make_float3(pos.x, pos.y, pos.z);
       cn->objects->hasTransform = 1;
-      toArray(cn->objects[obj].transformMatrix, nodeTransform); */
+      toArray(cn->objects[obj].transformMatrix, nodeTransform);
       cn->objectCount++;
       dprintf(2, "[LOADER] Object created %d\n", obj);
     }

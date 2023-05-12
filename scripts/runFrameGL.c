@@ -51,6 +51,8 @@ int main(int argc, char** argv) {
       (in.constants + i)->objectCount = objectCount;
       traceLoop(in.constants + i);
     }
+
+    rendererUploadObjects(renderer, &scene);
     rendererDraw(renderer, &scene);
 
   } while (rendererPollEvents(renderer));
