@@ -207,7 +207,8 @@ int BUFF_START_USER = 3;
                           o(u_useTextures) \
                             o(u_ViewMat)   \
                               o(u_ProjMat) \
-                                o(u_WorldMat)
+                                o(u_WorldMat) \
+  o(u_flatUV)
 
 typedef struct _Renderer {
   void*        window;
@@ -472,11 +473,13 @@ void bindMaterial(Renderer* renderer, Material* mat) {
 
 int bindMesh(Renderer* renderer, Mesh* mesh, int meshIdx) {
   int vertexCount = mesh->tMesh.vertexCount;
+  glUniform1i(renderer->pbr_u_flatUV, 0);
   switch (mesh->type) {
     case PLAIN:
       glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[BUFF_PLAIN]);
       glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[BUFF_PLAIN]);
       glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, (float*)*meshTransformPlane());
+      glUniform1i(renderer->pbr_u_flatUV, 1);
       vertexCount = 6;
       break;
     case MESH:
@@ -493,7 +496,6 @@ void renderScene(Renderer* renderer, Scene* scene, float* viewMat, float* projMa
   PushConstants* cn = (in.constants + frame);
   glUniformMatrix4fv(renderer->pbr_u_ViewMat, 1, 0, viewMat);
   glUniformMatrix4fv(renderer->pbr_u_ProjMat, 1, 0, projMat);
-  glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, indentity());
 
   for (int d = 0; d < cn->objectCount; d++) {
     Object* obj  = &cn->objects[d];
@@ -501,6 +503,8 @@ void renderScene(Renderer* renderer, Scene* scene, float* viewMat, float* projMa
 
     if (obj->hasTransform) {
       glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, (float*)&obj->transformMatrix->x);
+    } else { 
+      glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, indentity());
     }
 
     int vertexCount = bindMesh(renderer, mesh, obj->mesh);

@@ -4,6 +4,7 @@ Object objectCreate(int material, int mesh, float3 origin) {
   c.material = material;
   c.mesh     = mesh;
   c.origin   = origin;
+  c.hasTransform = 0;
   return c;
 }
 Material materialCreate(float3 kd, float3 ks, float3 ka, float fresnel, float ior) {
