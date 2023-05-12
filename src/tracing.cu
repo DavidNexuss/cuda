@@ -75,7 +75,22 @@ HEAD float3 rotateVector(float3 rd, float3 y) {
   return applyMatrix(rd, x, y, z);
 }
 //Signed distance field functions combined with direction optimisation whenever possible
-HEAD int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* normal);
+HEAD int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* normal){
+  float3 oc = ro - 0;
+  float a = dot(rd,rd);
+  float b = 2.0 * dot(oc,rd);
+  float c = dot(oc,oc) - radius * radius;
+  float discriminant = b*b - 4*a*c;
+  if(discriminant <= 0.0) return 0;
+
+  *delta = (-b - sqrt(discriminant)) / (2 * a);
+  *normal = lNormalize((ro + rd * *delta));
+  normal->x = -normal->x ;
+  normal->y = -normal->y ;
+  normal->z = -normal->z ;
+  return 1;
+}
+
 HEAD int sdfHitPlane(float3 ro, float3 rd, float* delta) {
   if (rd.y > 0.0f) return 0;
   *delta = ro.y / rd.y;
@@ -127,7 +142,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
   rd = lNormalize(rdProjected);
 
   float3 currentColor = make_float3(1, 1, 1);
-  for (int d = 0; d < maxDepth; d++) {
+  for (int d = 0; d < 1; d++) {
     float3 hitNormal;
     float  delta           = FLT_MAX;
     int    collisionObject = -1;
@@ -143,6 +158,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
           hitStatus     = sdfHitPlane(ro, rotateVector(rd, partialNormal), &partialDelta);
           break;
         case SPHERE:
+	  hitStatus = sdfHitSphere(ro,rd,0.8,&partialDelta,&partialNormal);
           break;
         case MESH:
           break;
@@ -161,7 +177,8 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
     }
 
     if (collisionObject == -1) {
-      return prod(currentColor, sampleEnvMap(skyTexture, rd));
+      return prod(currentColor, sampleEnvMap(skyTexture, rd) * 4.0);
+      //return prod(currentColor, sampleEnvMap(skyTexture, rd) * 4.0);
     }
 
     float fresnel = abs(dot(rd, hitNormal));
@@ -189,7 +206,8 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
     rd = lNormalize(rd);
   }
-  return currentColor;
+
+  return prod(currentColor, sampleEnvMap(skyTexture, rd) * 4.0);
 }
 
 

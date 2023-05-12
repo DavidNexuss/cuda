@@ -11,5 +11,6 @@
 
 export PATH=/Soft/cuda/11.2.1/bin:$PATH
 ./runBoada.sh scripts/test1.c scripts/runFrame.c
-./runBoada.sh scripts/test2.c scripts/runFrame.c
-./runBoada.sh scripts/test3.c scripts/runFrame.c
+./runBoada.sh scripts/testSphere.c scripts/runFrame.c
+./runBoada.sh scripts/test1.c scripts/runFrames.c
+# ./runBoada.sh scripts/test3.c scripts/runFrame.c

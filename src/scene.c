@@ -237,7 +237,7 @@ void sceneRunSuite(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*
 
 void sceneRunSuiteMovie(SceneDesc sceneDesc, const char* path, void(initScene)(Scene*), void(initSceneFrame)(PushConstants* cn), void(callback)(Scene*, int f, const char* path)) {
 
-  int simultaneous         = 4;
+  int simultaneous         = 64;
   int maxIterations        = (128 * 4) / simultaneous;
   sceneDesc.framesInFlight = simultaneous;
   Scene scene              = sceneCreate(sceneDesc);
