@@ -273,7 +273,7 @@ mat4* linearViewMatrix(float3 origin, float3 direction) {
 mat4* rendererProjMatrix(Renderer* renderer) {
   static mat4 dest;
   setId(&dest[0][0]);
-  glm_perspective_default(ra, dest);
+  glm_perspective(M_PI / 2.0f, ra, 0.05f, 2000.0f, dest);
   return &dest;
 }
 
@@ -303,6 +303,8 @@ void camUpdate(float3* cam, float3* dir) {
   dir->x = cos(xpos);
   dir->y = sin(ypos);
   dir->z = sin(xpos);
+
+  glm_normalize(&dir->x);
 }
 
 void setVertexAttribs() {
@@ -523,8 +525,8 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
     float* projMat = (float*)*rendererProjMatrix(renderer);
 
     glUniform1i(renderer->pbr_u_envMap, cn->uniforms.skyTexture);
-    glUniform3f(renderer->pbr_u_ro, viewMat[12], viewMat[13], viewMat[14]);
-    glUniform3f(renderer->pbr_u_rd, viewMat[8], viewMat[9], viewMat[10]);
+    glUniform3f(renderer->pbr_u_ro, renderer->camPos.x, renderer->camPos.y, renderer->camPos.z);
+    glUniform3f(renderer->pbr_u_rd, renderer->camDir.x, renderer->camDir.y, renderer->camDir.z);
 
     renderBackground(renderer);
     renderScene(renderer, scene, viewMat, projMat, i);

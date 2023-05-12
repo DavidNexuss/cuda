@@ -22,7 +22,7 @@ void traceInit(Scene* scene) {
   scene->materialCount = materialIdx;
   scene->meshCount     = meshIdx;
   scene->textureCount  = textureIdx;
-  sceneLoadOBJ("assets/mustang.obj", scene);
+  sceneLoadOBJ("assets/obj/audi/mesh.obj", scene);
 }
 
 #include <math.h>

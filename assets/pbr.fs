@@ -50,8 +50,8 @@ vec3 phongShading(vec3 I, vec3 L, vec3 N) {
 }
 
 vec3 backShading() { 
-  vec3 rd = f_pos.xyz;
-  rd.z = 1;
+  vec3 rd = normalize(vec3(f_pos.xy, 1));
+  rd = mat3(cross(vec3(0,1,0), u_rd), vec3(0,1,0), u_rd) * rd;
   vec2 st = envUV(normalize(rd));
   st.y = 1 - st.y;
   return texture2D(u_envMap, st).xyz;
