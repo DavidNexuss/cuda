@@ -12,6 +12,7 @@
 #include "util.h"
 #include "backend.h"
 #include <cglm/cglm.h>
+#include "thirdparty/lightmapper/lightmapper.h"
 
 #define ERROR(...) dprintf(2, __VA_ARGS__)
 #define VERIFY(X)                                        \
@@ -34,6 +35,7 @@ MessageCallback(GLenum        source,
           (type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""),
           type, severity, message);
 }
+
 
 int   windowWidth  = 0;
 int   windowHeight = 0;
@@ -183,6 +185,24 @@ int BUFF_CUBE       = 1;
 int BUFF_ENV        = 2;
 int BUFF_START_USER = 3;
 
+#define UNIFORMLIST(o)                     \
+  o(u_envMap)                              \
+    o(u_diffuseTexture)                    \
+      o(u_specularTexture)                 \
+        o(u_bumpTexture)                   \
+          o(u_kd)                          \
+            o(u_ka)                        \
+              o(u_ks)                      \
+                o(u_shinnness)             \
+                  o(u_ro)                  \
+                    o(u_rd)                \
+                      o(u_isBack)          \
+                        o(u_shadingMode)   \
+                          o(u_useTextures) \
+                            o(u_ViewMat)   \
+                              o(u_ProjMat) \
+                                o(u_WorldMat)
+
 typedef struct _Renderer {
   void*        window;
   int          hintWindow;
@@ -196,15 +216,11 @@ typedef struct _Renderer {
   GLuint* fbos;
 
   GLuint programPbr;
-  GLuint programPbrWorldMat;
-  GLuint programPbrViewMat;
-  GLuint programPbrProjMat;
 
-  GLuint programPbr_diffuseTexture;
-  GLuint programPbr_envMap;
-  GLuint programPbr_ro;
-  GLuint programPbr_rd;
-  GLuint programPbr_isBack;
+#define UNIFORM_DECL(u) GLuint pbr_##u;
+  UNIFORMLIST(UNIFORM_DECL)
+#undef UNIFORM_DECL
+
   GLuint envMap[8];
 
   float3 camPos;
@@ -305,8 +321,11 @@ Renderer* rendererCreate(RendererDesc desc) {
     glCullFace(GL_BACK);
     glfwWindowHint(GLFW_SAMPLES, 4);
     glEnable(GL_MULTISAMPLE);
+
+#ifdef DEBUG
     glEnable(GL_DEBUG_OUTPUT);
     glDebugMessageCallback(MessageCallback, 0);
+#endif
   }
   //GL gen
   {
@@ -337,16 +356,12 @@ Renderer* rendererCreate(RendererDesc desc) {
 
   renderer->programPbr = loadProgram("assets/pbr.vs", "assets/pbr.fs");
 
-  renderer->programPbrViewMat         = glGetUniformLocation(renderer->programPbr, "uViewMat");
-  renderer->programPbrProjMat         = glGetUniformLocation(renderer->programPbr, "uProjMat");
-  renderer->programPbrWorldMat        = glGetUniformLocation(renderer->programPbr, "uWorldMat");
-  renderer->programPbr_diffuseTexture = glGetUniformLocation(renderer->programPbr, "diffuseTexture");
-  renderer->programPbr_ro             = glGetUniformLocation(renderer->programPbr, "ro");
-  renderer->programPbr_rd             = glGetUniformLocation(renderer->programPbr, "rd");
-  renderer->programPbr_envMap         = glGetUniformLocation(renderer->programPbr, "envMap");
-  renderer->programPbr_isBack         = glGetUniformLocation(renderer->programPbr, "isBack");
-  renderer->camPos                    = make_float3(0, 1, 0);
-  renderer->camDir                    = make_float3(0, 0, -1);
+#define UNIFORM_ASSIGN(u) renderer->pbr_##u = glGetUniformLocation(renderer->programPbr, #u);
+  UNIFORMLIST(UNIFORM_ASSIGN)
+#undef UNIFORM_ASSIGN
+
+  renderer->camPos = make_float3(0, 1, 0);
+  renderer->camDir = make_float3(0, 0, -1);
 
   dprintf(2, "[Renderer] Render create completed.\n");
   return renderer;
@@ -417,46 +432,62 @@ void renderBackground(Renderer* renderer) {
   glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[BUFF_PLAIN]);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[BUFF_PLAIN]);
   setVertexAttribs();
-  glUniformMatrix4fv(renderer->programPbrWorldMat, 1, 0, (float*)*meshTransformPlaneScreen());
-  glUniformMatrix4fv(renderer->programPbrViewMat, 1, 0, indentity());
-  glUniformMatrix4fv(renderer->programPbrProjMat, 1, 0, indentity());
-  glUniform1i(renderer->programPbr_isBack, 1);
+  glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, (float*)*meshTransformPlaneScreen());
+  glUniformMatrix4fv(renderer->pbr_u_ViewMat, 1, 0, indentity());
+  glUniformMatrix4fv(renderer->pbr_u_ProjMat, 1, 0, indentity());
+  glUniform1i(renderer->pbr_u_isBack, 1);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-  glUniform1i(renderer->programPbr_isBack, 0);
+  glUniform1i(renderer->pbr_u_isBack, 0);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
 }
 
+void bindMaterial(Renderer* renderer, Material* mat) {
+
+  glUniform1i(renderer->pbr_u_useTextures, mat->diffuseTexture >= 0);
+  if (mat->diffuseTexture >= 0) {
+    glUniform1i(renderer->pbr_u_diffuseTexture, mat->diffuseTexture);
+  } else {
+    glUniform3f(renderer->pbr_u_kd, mat->kd.x, mat->kd.y, mat->kd.z);
+    glUniform3f(renderer->pbr_u_ks, mat->ks.x, mat->ks.y, mat->ks.z);
+  }
+}
+
+int bindMesh(Renderer* renderer, Mesh* mesh, int meshIdx) {
+  int vertexCount = mesh->tMesh.vertexCount;
+  switch (mesh->type) {
+    case PLAIN:
+      glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[BUFF_PLAIN]);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[BUFF_PLAIN]);
+      glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, (float*)*meshTransformPlane());
+      vertexCount = 6;
+      break;
+    case MESH:
+      glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[meshIdx + BUFF_START_USER]);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[meshIdx + BUFF_START_USER]);
+      vertexCount = mesh->tMesh.indexCount;
+      break;
+  }
+  return vertexCount;
+}
 void renderScene(Renderer* renderer, Scene* scene, float* viewMat, float* projMat, int frame) {
 
   SceneInput     in = sceneInputHost(scene);
   PushConstants* cn = (in.constants + frame);
-  glUniformMatrix4fv(renderer->programPbrViewMat, 1, 0, viewMat);
-  glUniformMatrix4fv(renderer->programPbrProjMat, 1, 0, projMat);
-  glUniformMatrix4fv(renderer->programPbrWorldMat, 1, 0, indentity());
+  glUniformMatrix4fv(renderer->pbr_u_ViewMat, 1, 0, viewMat);
+  glUniformMatrix4fv(renderer->pbr_u_ProjMat, 1, 0, projMat);
+  glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, indentity());
 
   for (int d = 0; d < cn->objectCount; d++) {
-    Object* obj         = &cn->objects[d];
-    Mesh*   mesh        = &in.meshes[obj->mesh];
-    int     vertexCount = mesh->tMesh.vertexCount;
-    switch (mesh->type) {
-      case PLAIN:
-        glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[BUFF_PLAIN]);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[BUFF_PLAIN]);
-        glUniformMatrix4fv(renderer->programPbrWorldMat, 1, 0, (float*)*meshTransformPlane());
-        vertexCount = 6;
-        break;
-      case MESH:
-        glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[obj->mesh + BUFF_START_USER]);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[obj->mesh + BUFF_START_USER]);
-        vertexCount = mesh->tMesh.indexCount;
-        break;
-    }
-    Material* mat = &in.materials[obj->material];
-    if (mat->diffuseTexture >= 0) {
-      glUniform1i(renderer->programPbr_diffuseTexture, mat->diffuseTexture);
+    Object* obj  = &cn->objects[d];
+    Mesh*   mesh = &in.meshes[obj->mesh];
+
+    if (obj->hasTransform) {
+      glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, (float*)&obj->transformMatrix->x);
     }
 
+    int vertexCount = bindMesh(renderer, mesh, obj->mesh);
+    bindMaterial(renderer, &in.materials[obj->material]);
     setVertexAttribs();
     glDrawElements(GL_TRIANGLES, vertexCount, GL_UNSIGNED_INT, 0);
   }
@@ -478,9 +509,9 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
     float* viewMat = (float*)*linearViewMatrix(renderer->camPos, renderer->camDir);
     float* projMat = (float*)*rendererProjMatrix(renderer);
 
-    glUniform1i(renderer->programPbr_envMap, cn->uniforms.skyTexture);
-    glUniform3f(renderer->programPbr_ro, viewMat[12], viewMat[13], viewMat[14]);
-    glUniform3f(renderer->programPbr_rd, viewMat[8], viewMat[9], viewMat[10]);
+    glUniform1i(renderer->pbr_u_envMap, cn->uniforms.skyTexture);
+    glUniform3f(renderer->pbr_u_ro, viewMat[12], viewMat[13], viewMat[14]);
+    glUniform3f(renderer->pbr_u_rd, viewMat[8], viewMat[9], viewMat[10]);
 
     renderBackground(renderer);
     renderScene(renderer, scene, viewMat, projMat, i);

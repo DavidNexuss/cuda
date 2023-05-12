@@ -1,3 +1,6 @@
 [submodule "backends/thirdparty/assimp"]
 	path = backends/thirdparty/assimp
 	url = https://github.com/assimp/assimp
+[submodule "backends/thirdparty/lightmapper"]
+	path = backends/thirdparty/lightmapper
+	url = https://github.com/ands/lightmapper.git

@@ -20,6 +20,9 @@ typedef struct
   int    material;
   int    mesh;
   float3 origin;
+  Mat4   transformMatrix;
+  Mat4   tbn;
+  int    hasTransform;
 } Object;
 
 Object objectCreate(int material, int mesh, float3 origin);

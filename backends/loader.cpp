@@ -47,9 +47,9 @@ static int processMaterial(int materialIdx, const aiScene* scene, Scene* tracerS
   int       traceMaterial    = tracerScene->materialCount;
   Material* traceMaterialPtr = ((Material*)tracerScene->materials.H) + traceMaterial;
 
-  for (int i = 0; i < mat->mNumProperties; i++) {
-    auto* prop = mat->mProperties[i];
-  }
+  mat->Get(AI_MATKEY_COLOR_DIFFUSE, traceMaterialPtr->kd);
+  mat->Get(AI_MATKEY_COLOR_AMBIENT, traceMaterialPtr->ka);
+  mat->Get(AI_MATKEY_COLOR_SPECULAR, traceMaterialPtr->ks);
 
   static aiTextureType types[] = {aiTextureType_DIFFUSE, aiTextureType_SPECULAR};
   //TODO: Magic number
@@ -147,8 +147,17 @@ static int processMesh(int meshIdx, const aiScene* scene, Scene* tracerScene) {
   dprintf(2, "[LOADER] Mesh created %d\n", meshTracer);
   return cache.meshCache[meshIdx] = meshTracer;
 }
-static void processNode(aiNode* node, const aiScene* scene, Scene* tracerScene) {
-  // process all the node's meshes (if any)
+
+void toArray(Mat4 array, aiMatrix4x4& n) {
+  array[0] = make_float4(n.a1, n.a2, n.a3, n.a4);
+  array[1] = make_float4(n.b1, n.b2, n.b3, n.b4);
+  array[2] = make_float4(n.c1, n.c2, n.c3, n.c4);
+  array[3] = make_float4(n.d1, n.d2, n.d3, n.d4);
+}
+static void processNode(aiNode* node, const aiScene* scene, Scene* tracerScene, aiMatrix4x4 parentTransform) {
+
+  aiMatrix4x4 nodeTransform = parentTransform * node->mTransformation;
+
   SceneInput in = sceneInputHost(tracerScene);
   for (unsigned int i = 0; i < node->mNumMeshes; i++) {
     int meshTracer    = processMesh(node->mMeshes[i], scene, tracerScene);
@@ -161,14 +170,16 @@ static void processNode(aiNode* node, const aiScene* scene, Scene* tracerScene) 
       node->mTransformation.Decompose(scale, rot, pos);
       cn->objects[obj].mesh     = meshTracer;
       cn->objects[obj].material = materialTrace;
-      cn->objects[obj].origin   = make_float3(pos.x, pos.y, pos.z);
+      cn->objects[obj].origin   = make_float3(pos.x, pos.y, pos.z); /*
+      cn->objects->hasTransform = 1;
+      toArray(cn->objects[obj].transformMatrix, nodeTransform); */
       cn->objectCount++;
       dprintf(2, "[LOADER] Object created %d\n", obj);
     }
   }
   // then do the same for each of its children
   for (unsigned int i = 0; i < node->mNumChildren; i++) {
-    processNode(node->mChildren[i], scene, tracerScene);
+    processNode(node->mChildren[i], scene, tracerScene, nodeTransform);
   }
 }
 
@@ -180,7 +191,12 @@ static int _sceneLoadOBJ(const char* path, Scene* scene) {
     dprintf(2, "[LOADER] Error processing mesh\n");
     return 1;
   }
-  processNode(scn->mRootNode, scn, scene);
+  aiMatrix4x4 id;
+  id.a1 = 1;
+  id.b2 = 1;
+  id.c3 = 1;
+  id.d4 = 1;
+  processNode(scn->mRootNode, scn, scene, id);
   dprintf(2, "[LOADER] Mesh processing successful\n");
   return 0;
 }

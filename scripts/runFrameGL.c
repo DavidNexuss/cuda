@@ -56,6 +56,6 @@ int main(int argc, char** argv) {
   } while (rendererPollEvents(renderer));
 
   rendererDestoy(renderer);
-  sceneDestroy(&scene);
+  // sceneDestroy(&scene);
   bufferDebugStats();
 }
