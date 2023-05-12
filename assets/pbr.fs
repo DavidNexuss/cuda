@@ -46,7 +46,7 @@ vec3 phongShading(vec3 I, vec3 L, vec3 N) {
   float fresnel = 1 - abs(dot(R, N));
   fresnel = fresnel * fresnel * 0.6;
   vec3 color = (1 - fresnel) * kd +  ka * ka * fresnel;
-  return vec3(N * 0.5 + 0.5);
+  return color;
 }
 
 vec3 backShading() { 
