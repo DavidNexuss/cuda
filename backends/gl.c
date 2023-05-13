@@ -39,10 +39,10 @@ MessageCallback(GLenum        source,
 
 int   windowWidth  = 0;
 int   windowHeight = 0;
+bool  windowMoved = 1;
 float xpos;
 float ypos;
 float ra;
-
 int keyboard[512];
 
 void window_size_callback(GLFWwindow* window, int width, int height) {
@@ -51,6 +51,7 @@ void window_size_callback(GLFWwindow* window, int width, int height) {
   windowHeight = height;
 
   ra = windowWidth / (float)(windowHeight);
+  windowMoved = 1;
 }
 void cursor_position_callback(GLFWwindow* window, double x, double y) {
   xpos = x / (float)windowWidth;
@@ -191,6 +192,27 @@ int BUFF_CUBE       = 1;
 int BUFF_ENV        = 2;
 int BUFF_START_USER = 3;
 
+int TEXT_IBL = 0;
+int TEXT_ATTACHMENT_COLOR = 1;
+int TEXT_ATTACHMENT_BLOOM = 2;
+int TEXT_GAUSS_RESULT0 = 3;
+int TEXT_GAUSS_RESULT1 = 4;
+int TEXT_GAUSS_RESULT2 = 5;
+int TEXT_GAUSS_RESULT3 = 6;
+int TEXT_START_USER = 16;
+
+int FBO_HDR_PASS = 0;
+int FBO_GAUSS_PASS = 1;
+int FBO_START_USER = 2;
+
+int RBO_HDR_PASS_DEPTH = 0;
+
+#define UNIFORMLIST_HDR(o) \
+  o(u_color) \
+  o(u_bloom)
+
+#define UNIFORMLIST_FILTER(o) o(u_input)
+
 #define UNIFORMLIST(o)                     \
   o(u_envMap)                              \
     o(u_diffuseTexture)                    \
@@ -221,11 +243,22 @@ typedef struct _Renderer {
   GLuint* vbos;
   GLuint* ebos;
   GLuint* fbos;
+  GLuint* rbos;
 
   GLuint programPbr;
+  GLuint programGaussFilter;
+  GLuint programPostHDR;
 
 #define UNIFORM_DECL(u) GLuint pbr_##u;
   UNIFORMLIST(UNIFORM_DECL)
+#undef UNIFORM_DECL
+
+#define UNIFORM_DECL(u) GLuint hdr_##u;
+  UNIFORMLIST_HDR(UNIFORM_DECL)
+#undef UNIFORM_DECL
+
+#define UNIFORM_DECL(u) GLuint filter_##u;
+  UNIFORMLIST_FILTER(UNIFORM_DECL)
 #undef UNIFORM_DECL
 
   GLuint envMap[8];
@@ -235,8 +268,14 @@ typedef struct _Renderer {
 
   bool firstFrame;
 
+  bool engineUsingIBL;
+
 } Renderer;
 
+
+int shouldRendererRenderPass(Renderer* renderer) { 
+  return renderer->desc.flag_bloom || renderer->desc.flag_bloom;
+}
 
 GLfloat* indentity() {
   static GLfloat id[] = {
@@ -327,6 +366,7 @@ Renderer* rendererCreate(RendererDesc desc) {
   renderer->vbos     = (GLuint*)malloc(MAX_OBJECTS * sizeof(GLuint));
   renderer->ebos     = (GLuint*)malloc(MAX_OBJECTS * sizeof(GLuint));
   renderer->fbos     = (GLuint*)malloc(MAX_OBJECTS * sizeof(GLuint));
+  renderer->rbos     = (GLuint*)malloc(MAX_OBJECTS * sizeof(GLuint));
 
 
   //GL configuration
@@ -348,14 +388,14 @@ Renderer* rendererCreate(RendererDesc desc) {
     glGenBuffers(MAX_OBJECTS, renderer->ebos);
     glGenBuffers(MAX_OBJECTS, renderer->vbos);
     glGenTextures(MAX_OBJECTS, renderer->textures);
+    glGenFramebuffers(MAX_OBJECTS, renderer->fbos);
+    glGenRenderbuffers(MAX_OBJECTS, renderer->rbos);
   }
 
   //Upload primitive buffers
   {
-
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[BUFF_PLAIN]);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[BUFF_PLAIN]);
-
     glBufferData(GL_ARRAY_BUFFER, sizeof(mesh_plain_vbo), mesh_plain_vbo, GL_STATIC_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(mesh_plain_ebo), mesh_plain_ebo, GL_STATIC_DRAW);
   }
@@ -383,20 +423,52 @@ Renderer* rendererCreate(RendererDesc desc) {
   return renderer;
 }
 
-void rendererInitEnvMap(Renderer* renderer, Texture* envMapTexture) {}
+/* Custom GL utility functions */
+
+void glAttachScreenTexture(Renderer* renderer, int textureSlot, int attachment, GLenum type, GLenum format) { 
+  if(windowMoved){ 
+    glActiveTexture(GL_TEXTURE0 + textureSlot);
+    glBindTexture(GL_TEXTURE_2D, renderer->textures[textureSlot]);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, windowWidth, windowHeight, 0 , type, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); 
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, renderer->textures[textureSlot], 0);  
+    dprintf(2, "[RENDERER] Generated screen texture for %d\n", textureSlot);
+  }
+}
+
+void glAttachRenderBuffer(Renderer* renderer, int rbo, int attachment, GLenum type) { 
+  if(windowMoved){ 
+    glBindRenderbuffer(GL_RENDERBUFFER, renderer->rbos[rbo]);
+    glRenderbufferStorage(GL_RENDERBUFFER, type, windowWidth, windowHeight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, renderer->rbos[rbo]);  
+    dprintf(2, "[RENDERER] Generated render buffer for %d\n", rbo);
+  }
+} 
+
+/* End custom GL utility functions */
+
+
+void rendererGenerateTextures(Renderer* renderer, Scene* scene) { 
+  Texture* textureTable = (Texture*)scene->texturesTable.H;
+  SceneInput in = sceneInputHost(scene);
+  Texture* envMap = &textureTable[in.constants->uniforms.skyTexture];
+
+}
 
 void rendererUpload(Renderer* renderer, Scene* scene) {
   dprintf(2, "Check %d\n", renderer->vbos[BUFF_PLAIN]);
   Texture* textureTable = (Texture*)scene->texturesTable.H;
   for (int i = 0; i < scene->textureCount; i++) {
-    glActiveTexture(GL_TEXTURE0 + i);
+    glActiveTexture(GL_TEXTURE0 + i + TEXT_START_USER);
     glBindTexture(GL_TEXTURE_2D, renderer->textures[i]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureTable[i].width, textureTable[i].height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureTable[i].data);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
-
+  
+  rendererGenerateTextures(renderer, scene);
   Mesh* meshList = scene->meshes.H;
 
   float**        vboData = (float**)scene->vertexBuffersData;
@@ -444,18 +516,24 @@ void rendererDestoy(Renderer* renderer) {
   dprintf(2, "[Renderer] Render destroy completed.\n");
 }
 
-void renderBackground(Renderer* renderer) {
+void rendererRenderScreenMesh(Renderer* renderer, GLuint worldMat, GLuint viewMat, GLuint projMat) { 
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
   glBindBuffer(GL_ARRAY_BUFFER, renderer->vbos[BUFF_PLAIN]);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebos[BUFF_PLAIN]);
   setVertexAttribs();
-  glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, (float*)*meshTransformPlaneScreen());
-  glUniformMatrix4fv(renderer->pbr_u_ViewMat, 1, 0, indentity());
-  glUniformMatrix4fv(renderer->pbr_u_ProjMat, 1, 0, indentity());
-  glUniform1i(renderer->pbr_u_isBack, 1);
+  glUniformMatrix4fv(worldMat, 1, 0, (float*)*meshTransformPlaneScreen());
+  glUniformMatrix4fv(viewMat, 1, 0, indentity());
+  glUniformMatrix4fv(projMat, 1, 0, indentity());
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-  glUniform1i(renderer->pbr_u_isBack, 0);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+}
+
+void rendererRenderScreenQuad(Renderer* renderer) { 
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_CULL_FACE);
+  glDrawArrays(GL_TRIANGLES, 6, 0);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
 }
@@ -464,7 +542,7 @@ void bindMaterial(Renderer* renderer, Material* mat) {
 
   glUniform1i(renderer->pbr_u_useTextures, mat->diffuseTexture >= 0);
   if (mat->diffuseTexture >= 0) {
-    glUniform1i(renderer->pbr_u_diffuseTexture, mat->diffuseTexture);
+    glUniform1i(renderer->pbr_u_diffuseTexture, mat->diffuseTexture + TEXT_START_USER);
   } else {
     glUniform3f(renderer->pbr_u_kd, mat->kd.x, mat->kd.y, mat->kd.z);
     glUniform3f(renderer->pbr_u_ks, mat->ks.x, mat->ks.y, mat->ks.z);
@@ -513,11 +591,11 @@ void renderScene(Renderer* renderer, Scene* scene, float* viewMat, float* projMa
     glDrawElements(GL_TRIANGLES, vertexCount, GL_UNSIGNED_INT, 0);
   }
 }
-void rendererDraw(Renderer* renderer, Scene* scene) {
+
+void rendererPass(Renderer* renderer, Scene* scene) {
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(renderer->programPbr);
-  glBindVertexArray(renderer->vao);
 
   SceneInput in = sceneInputHost(scene);
   for (int i = 0; i < scene->desc.framesInFlight; i++) {
@@ -528,14 +606,52 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
     float* viewMat = (float*)*linearViewMatrix(renderer->camPos, renderer->camDir);
     float* projMat = (float*)*rendererProjMatrix(renderer);
 
-    glUniform1i(renderer->pbr_u_envMap, cn->uniforms.skyTexture);
+    glUniform1i(renderer->pbr_u_envMap, cn->uniforms.skyTexture + TEXT_START_USER);
     glUniform3f(renderer->pbr_u_ro, renderer->camPos.x, renderer->camPos.y, renderer->camPos.z);
     glUniform3f(renderer->pbr_u_rd, renderer->camDir.x, renderer->camDir.y, renderer->camDir.z);
 
-    renderBackground(renderer);
+    glUniform1i(renderer->pbr_u_isBack, 1);
+    rendererRenderScreenMesh(renderer, renderer->pbr_u_WorldMat, renderer->pbr_u_ViewMat, renderer->pbr_u_ProjMat);
+    glUniform1i(renderer->pbr_u_isBack, 0);
     renderScene(renderer, scene, viewMat, projMat, i);
   }
+}
 
+
+void rendererBeginHDR(Renderer* renderer) { 
+  glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_HDR_PASS]);
+  glAttachRenderBuffer(renderer, RBO_HDR_PASS_DEPTH, GL_DEPTH_STENCIL_ATTACHMENT, GL_DEPTH24_STENCIL8);
+  glAttachScreenTexture(renderer, TEXT_ATTACHMENT_COLOR, 0, GL_RGB, GL_RGB16F);
+  if(renderer->desc.flag_bloom) { 
+     glAttachScreenTexture(renderer, TEXT_ATTACHMENT_BLOOM, 1, GL_RGB, GL_RGB16F);
+  }
+}
+
+void rendererFilterGauss(Renderer* renderer, int input, int output) { 
+  glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_GAUSS_PASS]);
+  glAttachScreenTexture(renderer, output, 0, GL_RGB, GL_RGB16F);
+  rendererRenderScreenQuad(renderer);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void rendererEnd() { 
+  glBindFramebuffer(GL_FRAMEBUFFER,0);
+}
+
+void rendererDraw(Renderer* renderer, Scene* scene) {
+
+  glBindVertexArray(renderer->vao);
+  int doHdrPass = shouldRendererRenderPass(renderer);
+  if(doHdrPass) rendererBeginHDR(renderer);
+  rendererPass(renderer, scene);
+  if(doHdrPass) { 
+    rendererEnd();
+    if(renderer->desc.flag_bloom) { 
+      rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0);
+    }
+
+  }
+  windowMoved = 0;
   glBindVertexArray(0);
 }
 

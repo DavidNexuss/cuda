@@ -18,6 +18,7 @@ in vec4 f_pos;
 in vec3 f_normal;
 in vec2 f_uv;
 out vec3 o_color;
+out vec3 o_bloom;
 
 #define M_PI 3.1415
 
@@ -57,13 +58,19 @@ vec3 backShading() {
   return texture2D(u_envMap, st).xyz;
 }
 
-void main() { 
+vec3 shading() { 
   if(u_isBack) { 
-    o_color = backShading();
+    return backShading();
   } else {
     vec3 eyeRd = normalize(f_pos.xyz - u_ro);
     if(u_shadingMode == 0) {
-      o_color = phongShading(eyeRd, vec3(1,-1,1), f_normal);
+      return phongShading(eyeRd, vec3(1,-1,1), f_normal);
     }
   }
+  return vec3(0,0,0);
+}
+void main() { 
+  vec3 result = shading();
+  o_color = fract(result);
+  o_bloom = result - o_color;
 }

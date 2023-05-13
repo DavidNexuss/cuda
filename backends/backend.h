@@ -8,6 +8,9 @@ typedef struct _Scene    Scene;
 typedef struct {
   int width;
   int height;
+  int flag_useDefferedShading;
+  int flag_bloom;
+  int flag_hdr;
 } RendererDesc;
 
 Renderer* rendererCreate(RendererDesc desc);
