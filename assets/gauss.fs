@@ -31,5 +31,5 @@ void main()
             w *= f;
         }
     }
-    color = result * 0.1;
+    color = result * 0.14;
 }

@@ -657,13 +657,13 @@ void rendererBeginHDR(Renderer* renderer) {
   glDrawBuffers(2, attachments);
 }
 
-int rendererFilterGauss(Renderer* renderer, int src, int pingTexture, int pongTexture) {
+int rendererFilterGauss(Renderer* renderer, int src, int pingTexture, int pongTexture,int passes) {
   int fbo = FBO_GAUSS_PASS_PING;
   int out = pingTexture;
   int in  = src;
 
   glUseProgram(renderer->programGaussFilter);
-  for (int i = 0; i < 2; i++) {
+  for (int i = 0; i < 2 * passes; i++) {
     bool horizontal = i % 2;
     glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_GAUSS_PASS_PING + horizontal]);
     glAttachScreenTexture(renderer, out, GL_COLOR_ATTACHMENT0, GL_RGB, GL_RGB16F);
@@ -687,7 +687,7 @@ void rendererHDR(Renderer* renderer, Scene* scene) {
   rendererPass(renderer, scene);
   rendererEnd();
   
-  int gaussBloomResult = rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0, TEXT_GAUSS_RESULT02);
+  int gaussBloomResult = rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0, TEXT_GAUSS_RESULT02, 8);
   glUseProgram(renderer->programPostHDR);
   glUniform1i(renderer->hdr_u_bloom, gaussBloomResult);
   glUniform1i(renderer->hdr_u_color, TEXT_ATTACHMENT_COLOR);
