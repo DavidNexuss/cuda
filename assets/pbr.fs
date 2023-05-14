@@ -17,8 +17,8 @@ uniform bool u_useTextures;
 in vec4 f_pos;
 in vec3 f_normal;
 in vec2 f_uv;
-out vec3 o_color;
-out vec3 o_bloom;
+layout (location = 0) out vec3 o_color;
+layout (location = 1) out vec3 o_bloom;
 
 #define M_PI 3.1415
 
@@ -70,7 +70,7 @@ vec3 shading() {
   return vec3(0,0,0);
 }
 void main() { 
-  vec3 result = shading() * 2.0;
+  vec3 result = shading();
   o_color = fract(result);
-  o_bloom = result - o_color;
+  o_bloom = result * 0.2;
 }

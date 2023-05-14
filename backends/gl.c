@@ -444,20 +444,26 @@ Renderer* rendererCreate(RendererDesc desc) {
 
 /* Custom GL utility functions */
 
-
-void rendererBindTexture(Renderer* renderer, int texture) {
-  glActiveTexture(GL_TEXTURE0 + texture);
-  glBindTexture(GL_TEXTURE_2D, renderer->textures[texture]);
-}
+static unsigned int attachments[] = { 
+  GL_COLOR_ATTACHMENT0, 
+  GL_COLOR_ATTACHMENT1, 
+  GL_COLOR_ATTACHMENT2,
+  GL_COLOR_ATTACHMENT3,
+  GL_COLOR_ATTACHMENT4,
+  GL_COLOR_ATTACHMENT5,
+  GL_COLOR_ATTACHMENT6, 
+  GL_COLOR_ATTACHMENT7
+};
 
 void glAttachScreenTexture(Renderer* renderer, int textureSlot, int attachment, GLenum type, GLenum format) {
   if (windowMoved) {
-    rendererBindTexture(renderer, textureSlot);
+    glActiveTexture(GL_TEXTURE0 + textureSlot);
+    glBindTexture(GL_TEXTURE_2D, renderer->textures[textureSlot]);
     glTexImage2D(GL_TEXTURE_2D, 0, format, windowWidth, windowHeight, 0, type, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, renderer->textures[textureSlot], 0);
-    dprintf(2, "[RENDERER] Generated screen texture for %d to attachment %d\n", textureSlot, attachment);
+    dprintf(2, "[RENDERER] Generated screen texture for %d to attachment %d -> %d\n", textureSlot, attachment, renderer->textures[textureSlot]);
     glActiveTexture(GL_TEXTURE0);
   }
 }
@@ -484,7 +490,8 @@ void rendererUpload(Renderer* renderer, Scene* scene) {
   dprintf(2, "Check %d\n", renderer->vbos[BUFF_PLAIN]);
   Texture* textureTable = (Texture*)scene->texturesTable.H;
   for (int i = 0; i < scene->textureCount; i++) {
-    rendererBindTexture(renderer, i + TEXT_START_USER);
+    glActiveTexture(GL_TEXTURE0 + i + TEXT_START_USER);
+    glBindTexture(GL_TEXTURE_2D, renderer->textures[i + TEXT_START_USER]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureTable[i].width, textureTable[i].height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureTable[i].data);
@@ -646,9 +653,8 @@ void rendererBeginHDR(Renderer* renderer) {
   glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_HDR_PASS]);
   glAttachRenderBuffer(renderer, RBO_HDR_PASS_DEPTH, GL_DEPTH_STENCIL_ATTACHMENT, GL_DEPTH24_STENCIL8);
   glAttachScreenTexture(renderer, TEXT_ATTACHMENT_COLOR, GL_COLOR_ATTACHMENT0, GL_RGB, GL_RGB16F);
-  if (renderer->desc.flag_bloom) {
-    glAttachScreenTexture(renderer, TEXT_ATTACHMENT_BLOOM, GL_COLOR_ATTACHMENT1, GL_RGB, GL_RGB16F);
-  }
+  glAttachScreenTexture(renderer, TEXT_ATTACHMENT_BLOOM, GL_COLOR_ATTACHMENT1, GL_RGB, GL_RGB16F);
+  glDrawBuffers(2, attachments);
 }
 
 int rendererFilterGauss(Renderer* renderer, int src, int pingTexture, int pongTexture) {
@@ -676,25 +682,26 @@ void rendererEnd() {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void rendererHDR(Renderer* renderer, Scene* scene) { 
+  rendererBeginHDR(renderer);
+  rendererPass(renderer, scene);
+  rendererEnd();
+  
+  int gaussBloomResult = rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0, TEXT_GAUSS_RESULT02);
+  glUseProgram(renderer->programPostHDR);
+  glUniform1i(renderer->hdr_u_bloom, gaussBloomResult);
+  glUniform1i(renderer->hdr_u_color, TEXT_ATTACHMENT_COLOR);
+  rendererRenderScreenQuad(renderer);
+}
+
+void rendererRegular(Renderer* renderer, Scene* scene) { 
+  rendererPass(renderer, scene);
+}
 void rendererDraw(Renderer* renderer, Scene* scene) {
 
   glBindVertexArray(renderer->vao);
-  int doHdrPass = shouldRendererRenderPass(renderer);
-  if (doHdrPass) rendererBeginHDR(renderer);
-  rendererPass(renderer, scene);
-
-  if (doHdrPass) {
-    rendererEnd();
-    int gaussBloomResult = -1;
-    if (renderer->desc.flag_bloom) {
-      gaussBloomResult = rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0, TEXT_GAUSS_RESULT02);
-    }
-    glUseProgram(renderer->programPostHDR);
-    glUniform1i(renderer->hdr_u_bloom, gaussBloomResult);
-    glUniform1i(renderer->hdr_u_color, TEXT_ATTACHMENT_COLOR);
-    rendererRenderScreenQuad(renderer);
-  }
-  windowMoved = 1;
+  rendererHDR(renderer, scene);
+  windowMoved = 0;
   glBindVertexArray(0);
 }
 
