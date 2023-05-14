@@ -70,7 +70,7 @@ vec3 shading() {
   return vec3(0,0,0);
 }
 void main() { 
-  vec3 result = shading();
+  vec3 result = shading() * 2.0;
   o_color = fract(result);
   o_bloom = result - o_color;
 }

@@ -192,20 +192,21 @@ int BUFF_CUBE       = 1;
 int BUFF_ENV        = 2;
 int BUFF_START_USER = 3;
 
-int TEXT_IBL              = 0;
-int TEXT_ATTACHMENT_COLOR = 1;
-int TEXT_ATTACHMENT_BLOOM = 2;
+int TEXT_STD              = 0;
+int TEXT_IBL              = 1;
+int TEXT_ATTACHMENT_COLOR = 2;
+int TEXT_ATTACHMENT_BLOOM = 3;
 
-int TEXT_GAUSS_RESULT0  = 3;
-int TEXT_GAUSS_RESULT02 = 4;
-int TEXT_GAUSS_RESULT1  = 5;
-int TEXT_GAUSS_RESULT12 = 6;
-int TEXT_GAUSS_RESULT2  = 7;
-int TEXT_GAUSS_RESULT22 = 8;
-int TEXT_GAUSS_RESULT3  = 9;
-int TEXT_GAUSS_RESULT32 = 10;
+int TEXT_GAUSS_RESULT0  = 4;
+int TEXT_GAUSS_RESULT02 = 5;
+int TEXT_GAUSS_RESULT1  = 6;
+int TEXT_GAUSS_RESULT12 = 7;
+int TEXT_GAUSS_RESULT2  = 8;
+int TEXT_GAUSS_RESULT22 = 9;
+int TEXT_GAUSS_RESULT3  = 10;
+int TEXT_GAUSS_RESULT32 = 11;
 
-int TEXT_START_USER = 16;
+int TEXT_START_USER = 32;
 
 int FBO_HDR_PASS        = 0;
 int FBO_GAUSS_PASS_PING = 1;
@@ -282,7 +283,7 @@ typedef struct _Renderer {
 
 
 int shouldRendererRenderPass(Renderer* renderer) {
-  return renderer->desc.flag_bloom || renderer->desc.flag_bloom;
+  return renderer->desc.flag_bloom || renderer->desc.flag_hdr;
 }
 
 GLfloat* indentity() {
@@ -443,15 +444,21 @@ Renderer* rendererCreate(RendererDesc desc) {
 
 /* Custom GL utility functions */
 
+
+void rendererBindTexture(Renderer* renderer, int texture) {
+  glActiveTexture(GL_TEXTURE0 + texture);
+  glBindTexture(GL_TEXTURE_2D, renderer->textures[texture]);
+}
+
 void glAttachScreenTexture(Renderer* renderer, int textureSlot, int attachment, GLenum type, GLenum format) {
   if (windowMoved) {
-    glActiveTexture(GL_TEXTURE0 + textureSlot);
-    glBindTexture(GL_TEXTURE_2D, renderer->textures[textureSlot]);
+    rendererBindTexture(renderer, textureSlot);
     glTexImage2D(GL_TEXTURE_2D, 0, format, windowWidth, windowHeight, 0, type, GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachment, GL_TEXTURE_2D, renderer->textures[textureSlot], 0);
-    dprintf(2, "[RENDERER] Generated screen texture for %d\n", textureSlot);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, renderer->textures[textureSlot], 0);
+    dprintf(2, "[RENDERER] Generated screen texture for %d to attachment %d\n", textureSlot, attachment);
+    glActiveTexture(GL_TEXTURE0);
   }
 }
 
@@ -460,7 +467,7 @@ void glAttachRenderBuffer(Renderer* renderer, int rbo, int attachment, GLenum ty
     glBindRenderbuffer(GL_RENDERBUFFER, renderer->rbos[rbo]);
     glRenderbufferStorage(GL_RENDERBUFFER, type, windowWidth, windowHeight);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, renderer->rbos[rbo]);
-    dprintf(2, "[RENDERER] Generated render buffer for %d\n", rbo);
+    dprintf(2, "[RENDERER] Generated render buffer for %d attachment %d\n", rbo, attachment);
   }
 }
 
@@ -477,13 +484,13 @@ void rendererUpload(Renderer* renderer, Scene* scene) {
   dprintf(2, "Check %d\n", renderer->vbos[BUFF_PLAIN]);
   Texture* textureTable = (Texture*)scene->texturesTable.H;
   for (int i = 0; i < scene->textureCount; i++) {
-    glActiveTexture(GL_TEXTURE0 + i + TEXT_START_USER);
-    glBindTexture(GL_TEXTURE_2D, renderer->textures[i]);
+    rendererBindTexture(renderer, i + TEXT_START_USER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureTable[i].width, textureTable[i].height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureTable[i].data);
     glGenerateMipmap(GL_TEXTURE_2D);
   }
+  glActiveTexture(GL_TEXTURE0);
 
   rendererGenerateTextures(renderer, scene);
   Mesh* meshList = scene->meshes.H;
@@ -638,9 +645,9 @@ void rendererPass(Renderer* renderer, Scene* scene) {
 void rendererBeginHDR(Renderer* renderer) {
   glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_HDR_PASS]);
   glAttachRenderBuffer(renderer, RBO_HDR_PASS_DEPTH, GL_DEPTH_STENCIL_ATTACHMENT, GL_DEPTH24_STENCIL8);
-  glAttachScreenTexture(renderer, TEXT_ATTACHMENT_COLOR, 0, GL_RGB, GL_RGB16F);
+  glAttachScreenTexture(renderer, TEXT_ATTACHMENT_COLOR, GL_COLOR_ATTACHMENT0, GL_RGB, GL_RGB16F);
   if (renderer->desc.flag_bloom) {
-    glAttachScreenTexture(renderer, TEXT_ATTACHMENT_BLOOM, 1, GL_RGB, GL_RGB16F);
+    glAttachScreenTexture(renderer, TEXT_ATTACHMENT_BLOOM, GL_COLOR_ATTACHMENT1, GL_RGB, GL_RGB16F);
   }
 }
 
@@ -653,7 +660,7 @@ int rendererFilterGauss(Renderer* renderer, int src, int pingTexture, int pongTe
   for (int i = 0; i < 2; i++) {
     bool horizontal = i % 2;
     glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_GAUSS_PASS_PING + horizontal]);
-    glAttachScreenTexture(renderer, out, 0, GL_RGB, GL_RGB16F);
+    glAttachScreenTexture(renderer, out, GL_COLOR_ATTACHMENT0, GL_RGB, GL_RGB16F);
     glUniform1i(renderer->filter_gauss_u_input, in);
     glUniform1i(renderer->filter_gauss_u_horizontal, 1);
     rendererRenderScreenQuad(renderer);
@@ -683,8 +690,8 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
       gaussBloomResult = rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0, TEXT_GAUSS_RESULT02);
     }
     glUseProgram(renderer->programPostHDR);
-    glUniform1i(renderer->hdr_u_bloom, renderer->textures[gaussBloomResult]);
-    glUniform1i(renderer->hdr_u_color, renderer->textures[TEXT_ATTACHMENT_COLOR]);
+    glUniform1i(renderer->hdr_u_bloom, gaussBloomResult);
+    glUniform1i(renderer->hdr_u_color, TEXT_ATTACHMENT_COLOR);
     rendererRenderScreenQuad(renderer);
   }
   windowMoved = 1;
