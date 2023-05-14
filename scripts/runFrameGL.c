@@ -36,6 +36,8 @@ int main(int argc, char** argv) {
   RendererDesc rendererDesc;
   rendererDesc.width  = 1080;
   rendererDesc.height = 720;
+  rendererDesc.flag_bloom = 1;
+  rendererDesc.flag_hdr = 1;
 
   Scene scene = sceneCreate(sceneDesc);
   traceInit(&scene);

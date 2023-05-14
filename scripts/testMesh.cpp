@@ -87,16 +87,16 @@ void addCube(std::vector<Vertex>& vbo, std::vector<unsigned int>& ebo, float H, 
   addPlain(vbo, ebo, make_float2(S + offset.x,0 + offset.y), make_float2(0 + offset.x,0 + offset.y), H);
 }
 
-MeshDesc getMesh() { 
+MeshDesc getMesh(int count) { 
   std::vector<Vertex>* vbo = new std::vector<Vertex>();
   std::vector<unsigned int>* ebo = new std::vector<unsigned int>();
 
 
-  for(int i = 0; i < 100; i++) { 
-    for(int j = 0; j < 100; j++) { 
+  for(int i = 0; i < count; i++) { 
+    for(int j = 0; j < count; j++) { 
       float H = (i + j) % 5 + 10;
-      addCube(*vbo, *ebo, H, make_float2(i * 10,j * 10), 5);
-      addCube(*vbo, *ebo, 1, make_float2(i * 10 - 0.5,j * 10 - 0.5), 6);
+      addCube(*vbo, *ebo, H, make_float2((i - count/2) * 10,(j - count/2) * 10), 5);
+      // addCube(*vbo, *ebo, 1, make_float2(i * 10 - 0.5,j * 10 - 0.5), 6);
     }
   }
 
@@ -119,7 +119,7 @@ void traceInit(Scene* scene) {
 
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 0));
   scene->meshCount = meshIdx;
-  sceneAddMesh(scene, getMesh());
+  sceneAddMesh(scene, getMesh(100));
   meshIdx = scene->meshCount;
 
   inp.materials[materialIdx++] = materialCreate(
