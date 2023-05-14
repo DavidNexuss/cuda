@@ -191,24 +191,24 @@ int BUFF_CUBE       = 1;
 int BUFF_ENV        = 2;
 int BUFF_START_USER = 3;
 
-#define UNIFORMLIST(o)                     \
-  o(u_envMap)                              \
-    o(u_diffuseTexture)                    \
-      o(u_specularTexture)                 \
-        o(u_bumpTexture)                   \
-          o(u_kd)                          \
-            o(u_ka)                        \
-              o(u_ks)                      \
-                o(u_shinnness)             \
-                  o(u_ro)                  \
-                    o(u_rd)                \
-                      o(u_isBack)          \
-                        o(u_shadingMode)   \
-                          o(u_useTextures) \
-                            o(u_ViewMat)   \
-                              o(u_ProjMat) \
+#define UNIFORMLIST(o)                        \
+  o(u_envMap)                                 \
+    o(u_diffuseTexture)                       \
+      o(u_specularTexture)                    \
+        o(u_bumpTexture)                      \
+          o(u_kd)                             \
+            o(u_ka)                           \
+              o(u_ks)                         \
+                o(u_shinnness)                \
+                  o(u_ro)                     \
+                    o(u_rd)                   \
+                      o(u_isBack)             \
+                        o(u_shadingMode)      \
+                          o(u_useTextures)    \
+                            o(u_ViewMat)      \
+                              o(u_ProjMat)    \
                                 o(u_WorldMat) \
-  o(u_flatUV)
+                                  o(u_flatUV)
 
 typedef struct _Renderer {
   void*        window;
@@ -375,8 +375,8 @@ Renderer* rendererCreate(RendererDesc desc) {
   UNIFORMLIST(UNIFORM_ASSIGN)
 #undef UNIFORM_ASSIGN
 
-  renderer->camPos = make_float3(0, 1, 0);
-  renderer->camDir = make_float3(0, 0, -1);
+  renderer->camPos     = make_float3(0, 1, 0);
+  renderer->camDir     = make_float3(0, 0, -1);
   renderer->firstFrame = true;
 
   dprintf(2, "[Renderer] Render create completed.\n");
@@ -419,11 +419,11 @@ void rendererUpload(Renderer* renderer, Scene* scene) {
 
   dprintf(2, "[Renderer] Render upload completed.\n");
 }
-void rendererUploadObjects(Renderer* renderer, Scene* scene) { 
-  if(renderer->firstFrame) {
-    SceneInput in      = sceneInputHost(scene);
-    renderer->camPos   = in.constants->camera.origin;
-    renderer->camPos.y = 1;
+void rendererUploadObjects(Renderer* renderer, Scene* scene) {
+  if (renderer->firstFrame) {
+    SceneInput in        = sceneInputHost(scene);
+    renderer->camPos     = in.constants->camera.origin;
+    renderer->camPos.y   = 1;
     renderer->firstFrame = 0;
   }
 }
@@ -503,7 +503,7 @@ void renderScene(Renderer* renderer, Scene* scene, float* viewMat, float* projMa
 
     if (obj->hasTransform) {
       glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, (float*)&obj->transformMatrix->x);
-    } else { 
+    } else {
       glUniformMatrix4fv(renderer->pbr_u_WorldMat, 1, 0, indentity());
     }
 
