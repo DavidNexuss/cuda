@@ -36,14 +36,13 @@ MessageCallback(GLenum        source,
           type, severity, message);
 }
 
-
-int   windowWidth  = 0;
-int   windowHeight = 0;
-bool  windowMoved = 1;
-float xpos;
-float ypos;
-float ra;
-int keyboard[512];
+static int   windowWidth  = 0;
+static int   windowHeight = 0;
+static bool  windowMoved = 1;
+static float xpos;
+static float ypos;
+static float ra;
+static int keyboard[512];
 
 void window_size_callback(GLFWwindow* window, int width, int height) {
   glViewport(0, 0, width, height);
@@ -184,6 +183,7 @@ GLuint loadProgram(const char* vs, const char* fs) {
   free((void*)VertexSourcePointer);
   free((void*)FragmentSourcePointer);
 
+  dprintf(2, "[RENDERER] Program loaded successfully %s\n", fs);
   return ProgramID;
 }
 
@@ -195,15 +195,22 @@ int BUFF_START_USER = 3;
 int TEXT_IBL = 0;
 int TEXT_ATTACHMENT_COLOR = 1;
 int TEXT_ATTACHMENT_BLOOM = 2;
+
 int TEXT_GAUSS_RESULT0 = 3;
-int TEXT_GAUSS_RESULT1 = 4;
-int TEXT_GAUSS_RESULT2 = 5;
-int TEXT_GAUSS_RESULT3 = 6;
+int TEXT_GAUSS_RESULT02 = 4;
+int TEXT_GAUSS_RESULT1 = 5;
+int TEXT_GAUSS_RESULT12 = 6;
+int TEXT_GAUSS_RESULT2 = 7;
+int TEXT_GAUSS_RESULT22 = 8;
+int TEXT_GAUSS_RESULT3 = 9;
+int TEXT_GAUSS_RESULT32 = 10;
+
 int TEXT_START_USER = 16;
 
 int FBO_HDR_PASS = 0;
-int FBO_GAUSS_PASS = 1;
-int FBO_START_USER = 2;
+int FBO_GAUSS_PASS_PING = 1;
+int FBO_GAUSS_PASS_PONG = 2;
+int FBO_START_USER = 3;
 
 int RBO_HDR_PASS_DEPTH = 0;
 
@@ -212,6 +219,7 @@ int RBO_HDR_PASS_DEPTH = 0;
   o(u_bloom)
 
 #define UNIFORMLIST_FILTER(o) o(u_input)
+#define UNIFORMLIST_GAUSS(o) o(u_input) o(u_horizontal)
 
 #define UNIFORMLIST(o)                     \
   o(u_envMap)                              \
@@ -257,8 +265,8 @@ typedef struct _Renderer {
   UNIFORMLIST_HDR(UNIFORM_DECL)
 #undef UNIFORM_DECL
 
-#define UNIFORM_DECL(u) GLuint filter_##u;
-  UNIFORMLIST_FILTER(UNIFORM_DECL)
+#define UNIFORM_DECL(u) GLuint filter_gauss_##u;
+  UNIFORMLIST_GAUSS(UNIFORM_DECL)
 #undef UNIFORM_DECL
 
   GLuint envMap[8];
@@ -410,9 +418,19 @@ Renderer* rendererCreate(RendererDesc desc) {
 
 
   renderer->programPbr = loadProgram("assets/pbr.vs", "assets/pbr.fs");
+  renderer->programGaussFilter = loadProgram("assets/filter.vs", "assets/gauss.fs");
+  renderer->programPostHDR = loadProgram("assets/filter.vs", "assets/hdr.fs");
 
 #define UNIFORM_ASSIGN(u) renderer->pbr_##u = glGetUniformLocation(renderer->programPbr, #u);
   UNIFORMLIST(UNIFORM_ASSIGN)
+#undef UNIFORM_ASSIGN
+
+#define UNIFORM_ASSIGN(u) renderer->hdr_##u = glGetUniformLocation(renderer->programPostHDR, #u);
+  UNIFORMLIST_HDR(UNIFORM_ASSIGN)
+#undef UNIFORM_ASSIGN
+
+#define UNIFORM_ASSIGN(u) renderer->filter_gauss_##u = glGetUniformLocation(renderer->programGaussFilter, #u);
+  UNIFORMLIST_GAUSS(UNIFORM_ASSIGN)
 #undef UNIFORM_ASSIGN
 
   renderer->camPos = make_float3(0, 1, 0);
@@ -533,7 +551,7 @@ void rendererRenderScreenMesh(Renderer* renderer, GLuint worldMat, GLuint viewMa
 void rendererRenderScreenQuad(Renderer* renderer) { 
   glDisable(GL_DEPTH_TEST);
   glDisable(GL_CULL_FACE);
-  glDrawArrays(GL_TRIANGLES, 6, 0);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
 }
@@ -627,11 +645,25 @@ void rendererBeginHDR(Renderer* renderer) {
   }
 }
 
-void rendererFilterGauss(Renderer* renderer, int input, int output) { 
-  glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_GAUSS_PASS]);
-  glAttachScreenTexture(renderer, output, 0, GL_RGB, GL_RGB16F);
-  rendererRenderScreenQuad(renderer);
+int rendererFilterGauss(Renderer* renderer, int src, int pingTexture, int pongTexture) {
+  int fbo = FBO_GAUSS_PASS_PING;
+  int out = pingTexture;
+  int in = src;
+
+  glUseProgram(renderer->programGaussFilter);
+  for(int i = 0; i < 2; i++) { 
+    bool horizontal = i % 2;
+    glBindFramebuffer(GL_FRAMEBUFFER, renderer->fbos[FBO_GAUSS_PASS_PING + horizontal]);
+    glAttachScreenTexture(renderer, out, 0, GL_RGB, GL_RGB16F);
+    glUniform1i(renderer->filter_gauss_u_input, in);
+    glUniform1i(renderer->filter_gauss_u_horizontal, 1);
+    rendererRenderScreenQuad(renderer);
+    in = out;
+    out = horizontal ? pingTexture :  pongTexture;
+  }
+
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  return out;
 }
 
 void rendererEnd() { 
@@ -644,14 +676,19 @@ void rendererDraw(Renderer* renderer, Scene* scene) {
   int doHdrPass = shouldRendererRenderPass(renderer);
   if(doHdrPass) rendererBeginHDR(renderer);
   rendererPass(renderer, scene);
+
   if(doHdrPass) { 
     rendererEnd();
+    int gaussBloomResult = -1;
     if(renderer->desc.flag_bloom) { 
-      rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0);
+      gaussBloomResult = rendererFilterGauss(renderer, TEXT_ATTACHMENT_BLOOM, TEXT_GAUSS_RESULT0, TEXT_GAUSS_RESULT02);
     }
-
+    glUseProgram(renderer->programPostHDR);
+    glUniform1i(renderer->hdr_u_bloom, renderer->textures[gaussBloomResult]);
+    glUniform1i(renderer->hdr_u_color, renderer->textures[TEXT_ATTACHMENT_COLOR]);
+    rendererRenderScreenQuad(renderer);
   }
-  windowMoved = 0;
+  windowMoved = 1;
   glBindVertexArray(0);
 }
 
