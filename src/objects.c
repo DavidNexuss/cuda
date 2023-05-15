@@ -8,11 +8,12 @@ Object objectCreate(int material, int mesh, float3 origin) {
 }
 Material materialCreate(float3 kd, float3 ks, float3 ka, float fresnel, float ior) {
   Material mat;
-  mat.ka      = ka;
-  mat.kd      = kd;
-  mat.ks      = ks;
-  mat.fresnel = fresnel;
-  mat.ior     = ior;
+  mat.emissionFactor = 0;
+  mat.ka             = ka;
+  mat.kd             = kd;
+  mat.ks             = ks;
+  mat.fresnel        = fresnel;
+  mat.ior            = ior;
   return mat;
 }
 

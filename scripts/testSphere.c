@@ -21,6 +21,15 @@ void traceInit(Scene* scene) {
     1.01);
   inp.materials[0].diffuseTexture = 0;
 
+  inp.materials[materialIdx++] = materialCreate(
+    make_float3(0.5, 0.7, 0.8),
+    make_float3(0.2, 0.4, 0.5),
+    make_float3(0.1, 0.1, 0.1),
+    0.1,
+    1.01);
+  inp.materials[1].diffuseTexture = 0;
+  inp.materials[1].emissionFactor = 50;
+
   inp.textures[textureIdx++] = textureCreate("assets/checker.png");
   inp.textures[textureIdx++] = textureCreate("assets/equi2.png");
 
@@ -47,12 +56,12 @@ void traceLoop(PushConstants* cn) {
   cn->camera.crossed   = make_float3(-1, 0, 0);
 
   int objectIdx            = 0;
-  cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, 0, 2));
+  cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, 0, -2));
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(-2.0, 0, 0));
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(2.0, 0, 0));
-  cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(2.0, 2, 0));
+  cn->objects[objectIdx++] = objectCreate(1, 0, make_float3(4.0, 4, -5));
   cn->objects[objectIdx++] = objectCreate(0, 1, make_float3(0, -1, 0));
-  cn->objects[objectIdx++] = objectCreate(0, 2, make_float3(0, 0, -5));
+  //cn->objects[objectIdx++] = objectCreate(0, 2, make_float3(0, 0, -5));
 
   cn->objectCount = objectIdx;
 }

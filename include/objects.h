@@ -23,6 +23,7 @@ Object objectCreate(int material, int mesh, float3 origin);
 //Material
 typedef struct
 {
+  float  emissionFactor;
   float3 kd;
   float3 ks;
   float3 ka;

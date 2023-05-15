@@ -29,8 +29,8 @@ int  main(int argc, char** argv) {
   sceneDesc.frameBufferWidth    = 1280 * 2;
   sceneDesc.frameBufferHeight   = 720 * 2;
   sceneDesc.framesInFlight      = 1;
-  sceneDesc.fWriteClamped       = 1;
-  sceneDesc.iterationsPerThread = 8;
+  sceneDesc.fWriteClamped       = 0;
+  sceneDesc.iterationsPerThread = 64;
   sceneDesc.numThreads          = 32;
   sceneRunSuite(sceneDesc, testname, traceInit, traceLoop, 0);
   bufferDebugStats();

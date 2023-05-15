@@ -194,7 +194,17 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
     Material* mat = &input.materials[obj->material];
 
     if (mat->diffuseTexture >= 0) {
-      currentColor = prod(currentColor, sampleTexture(&input.textures[mat->diffuseTexture], make_float2(nro.x, nro.z)));
+      float2 uv;
+      if (meshes[obj->mesh].type == PLAIN) {
+        uv = make_float2(nro.x, nro.z);
+      }
+      if (meshes[obj->mesh].type == SPHERE) {
+        float x = 1.5 * atan2(hitNormal.z, hitNormal.x) / (2 * M_PI);
+        float y = 0.5 + 2.0 * atan2(hitNormal.y, sqrt(hitNormal.x * hitNormal.x + hitNormal.z * hitNormal.z)) / (2 * M_PI);
+        uv      = make_float2(x, y);
+      }
+      currentColor = prod(currentColor, sampleTexture(&input.textures[mat->diffuseTexture], uv));
+      currentColor = currentColor + currentColor * mat->emissionFactor;
     } else {
       currentColor = prod(currentColor, mat->kd);
     }
@@ -204,9 +214,9 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
     float specular = currentColor.x * currentColor.x;
     magic          = lHash(magic);
-    rd.x           = rd.x + fresnel * lRandom(lHash(magic)) * 0.02 / specular;
-    rd.y           = rd.y + fresnel * lRandom(lHash(magic + 71)) * 0.02 / specular;
-    rd.z           = rd.z + fresnel * lRandom(lHash(magic + 45)) * 0.02 / specular;
+    rd.x           = rd.x + fresnel * lRandom(lHash(magic)) * 0.2 / specular;
+    rd.y           = rd.y + fresnel * lRandom(lHash(magic + 71)) * 0.2 / specular;
+    rd.z           = rd.z + fresnel * lRandom(lHash(magic + 45)) * 0.2 / specular;
 
     rd = lNormalize(rd);
   }
