@@ -15,14 +15,16 @@ SDIR = as
 
 OUT = tracer.a
 
-C_SOURCES = $(shell find $(IDIR) -type f -name *.c -printf "%f\n")
-CUDA_SOURCES = $(shell find $(IDIR) -type f -name *.cu -printf "%f\n")
+C_SOURCES = $(shell find $(IDIR) -type f -name '*.c' -printf "%f\n")
+CUDA_SOURCES = $(shell find $(IDIR) -type f -name '*.cu' -printf "%f\n")
 
 OBJECTS = $(patsubst %.c, $(ODIR)/%.o,$(C_SOURCES))
 CUDA_OBJECTS = $(patsubst %.cu, $(ODIR)/%.o,$(CUDA_SOURCES))
 
 all : $(OUT) $(ODIR) $(BIN)
 	mkdir -p results
+	echo "SOURCES $(C_SOURCES)"
+	echo "SOURCES $(CUDA_SOURCES)"
 
 $(ODIR)/%.o : $(IDIR)/%.cu
 	mkdir -p obj

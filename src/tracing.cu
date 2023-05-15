@@ -158,7 +158,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
           hitStatus     = sdfHitPlane(ro, rotateVector(rd, partialNormal), &partialDelta);
           break;
         case SPHERE:
-          hitStatus = sdfHitSphere(ro, rd, 0.8, &partialDelta, &partialNormal);
+          hitStatus = sdfHitSphere(ro, rd, mesh->tSphere.radius, &partialDelta, &partialNormal);
           break;
         case MESH:
           break;
@@ -260,6 +260,11 @@ void       _sceneRun(Scene* scene) {
   int  numThreads          = scene->desc.numThreads;
   int  iterationsPerThread = scene->desc.iterationsPerThread;
   int  jobId               = jobIdCounter;
+
+  SceneInput     in = sceneInputHost(scene);
+  PushConstants* cn = in.constants;
+
+  dprintf(2, "[CUDA %d] Camera [%f %f %f] to [%f %f %f]\n", jobId, cn->camera.origin.x, cn->camera.origin.y, cn->camera.origin.z, cn->camera.direction.x, cn->camera.direction.y, cn->camera.direction.z);
   dprintf(2, "[CUDA %d ] Running path tracing kernel [%d, %d, %d] with %d threads, iterations per thread: %d\n", jobId, numBlocks.x, numBlocks.y, numBlocks.z, numThreads, iterationsPerThread);
   pathTracingKernel<<<numBlocks, numThreads, sizeof(float3) * numThreads>>>(numBlocks.x, numBlocks.y, (float*)scene->framebuffer.D, iterationsPerThread, scene->desc.rayDepth, sceneInputDevice(scene), lHash(jobIdCounter * 4 + 7));
   dprintf(2, "[CUDA %d ] done\n", jobId);
