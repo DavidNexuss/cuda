@@ -11,6 +11,7 @@ void traceInit(Scene* scene) {
 
   inp.meshes[meshIdx++] = meshSphere(1.0);
   inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 0));
+  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 0.4, 1));
 
   inp.materials[materialIdx++] = materialCreate(
     make_float3(0.5, 0.7, 0.8),
@@ -51,6 +52,7 @@ void traceLoop(PushConstants* cn) {
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(2.0, 0, 0));
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(2.0, 2, 0));
   cn->objects[objectIdx++] = objectCreate(0, 1, make_float3(0, -1, 0));
+  cn->objects[objectIdx++] = objectCreate(0, 2, make_float3(0, 0, -5));
 
   cn->objectCount = objectIdx;
 }
