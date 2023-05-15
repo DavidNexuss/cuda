@@ -1,7 +1,7 @@
 #include <scene.h>
 
 const char* testname = "results/test1.png";
-void traceInit(Scene* scene) {
+void        traceInit(Scene* scene) {
   SceneInput inp = sceneInputHost(scene);
 
   int meshIdx     = 0;
