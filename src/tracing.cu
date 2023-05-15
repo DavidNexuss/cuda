@@ -7,6 +7,8 @@ extern "C" {
 
 #define HEAD __host__ __device__
 
+// #define DEBUG_OUTPUT_NORMAL
+
 HEAD float3 prod(float3 a, float3 b) {
   return make_float3(a.x * b.x, a.y * b.y, a.z * b.z);
 }
@@ -83,17 +85,19 @@ HEAD int sdfHitSphere(float3 ro, float3 rd, float radius, float* delta, float3* 
   float  discriminant = b * b - 4 * a * c;
   if (discriminant <= 0.0) return 0;
 
-  *delta    = (-b - sqrt(discriminant)) / (2 * a);
-  *normal   = lNormalize((ro + rd * *delta));
+  float diff = (-b - sqrt(discriminant)) / (2 * a);
+  if (diff <= 0.0f) return 0;
+  *delta    = diff;
   normal->x = -normal->x;
   normal->y = -normal->y;
   normal->z = -normal->z;
+  *normal   = lNormalize((ro + rd * *delta));
   return 1;
 }
 
 HEAD int sdfHitPlane(float3 ro, float3 rd, float* delta) {
   if (rd.y > 0.0f) return 0;
-  *delta = ro.y / rd.y;
+  *delta = -ro.y / rd.y;
   return 1;
 }
 
@@ -142,7 +146,7 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
   rd = lNormalize(rdProjected);
 
   float3 currentColor = make_float3(1, 1, 1);
-  for (int d = 0; d < 1; d++) {
+  for (int d = 0; d < maxDepth; d++) {
     float3 hitNormal;
     float  delta           = FLT_MAX;
     int    collisionObject = -1;
@@ -155,10 +159,10 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
       switch (mesh->type) {
         case PLAIN:
           partialNormal = mesh->tPlain.normal;
-          hitStatus     = sdfHitPlane(ro, rotateVector(rd, partialNormal), &partialDelta);
+          hitStatus     = sdfHitPlane(ro - obj->origin, rotateVector(rd, partialNormal), &partialDelta);
           break;
         case SPHERE:
-          hitStatus = sdfHitSphere(ro, rd, mesh->tSphere.radius, &partialDelta, &partialNormal);
+          hitStatus = sdfHitSphere(ro - obj->origin, rd, mesh->tSphere.radius, &partialDelta, &partialNormal);
           break;
         case MESH:
           break;
@@ -177,8 +181,9 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
     }
 
     if (collisionObject == -1) {
-      return prod(currentColor, sampleEnvMap(skyTexture, rd) * 4.0);
+      break;
     }
+
 
     float fresnel = abs(dot(rd, hitNormal));
 
@@ -206,6 +211,10 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
     rd = lNormalize(rd);
   }
 
+
+#ifdef DEBUG_OUTPUT_NORMAL
+  return (rd * 0.5 + 0.5) * 10.0;
+#endif
   return prod(currentColor, sampleEnvMap(skyTexture, rd) * 4.0);
 }
 
