@@ -1,6 +1,5 @@
 #include <scene.h>
 
-extern const char* testname;
 static SceneDesc defaultDesc() {
 
   SceneDesc sceneDesc;
@@ -26,12 +25,12 @@ void traceInit(Scene* scene);
 void traceLoop(PushConstants* cn);
 int  main(int argc, char** argv) {
   SceneDesc sceneDesc           = defaultDesc();
-  sceneDesc.frameBufferWidth    = 1280;
-  sceneDesc.frameBufferHeight   = 720;
+  sceneDesc.frameBufferWidth    = 1920 * 2;
+  sceneDesc.frameBufferHeight   = 1080 * 2;
   sceneDesc.framesInFlight      = 1;
   sceneDesc.fWriteClamped       = 1;
-  sceneDesc.iterationsPerThread = 8;
+  sceneDesc.iterationsPerThread = 32;
   sceneDesc.numThreads          = 32;
-  sceneRunSuite(sceneDesc, testname, traceInit, traceLoop, 0);
+  sceneRunSuiteMovieFrames(sceneDesc, "results/frame.png", traceInit, traceLoop);
   bufferDebugStats();
 }

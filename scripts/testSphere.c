@@ -1,14 +1,15 @@
 #include <scene.h>
 
-const char* testname = "results/test1.png";
-void traceInit(Scene* scene) {
+const char* testname = "results/testSphere.png";
+void        traceInit(Scene* scene) {
   SceneInput inp = sceneInputHost(scene);
 
   int meshIdx     = 0;
   int materialIdx = 0;
   int textureIdx  = 0;
 
-  inp.meshes[meshIdx++] = meshPlain(make_float3(0, 1, 0));
+  inp.meshes[meshIdx++]        = meshPlain(make_float3(0, 1, 0));
+  inp.meshes[meshIdx - 1].type = SPHERE;
 
   inp.materials[materialIdx++] = materialCreate(
     make_float3(0.5, 0.7, 0.8),
@@ -38,10 +39,9 @@ void traceLoop(PushConstants* cn) {
   cn->uniforms.skyTexture  = 1;
   cn->camera.znear         = 0.1f;
 
-  cn->camera.up        = make_float3(0, 1, 0);
-  cn->camera.origin    = make_float3(0, 0.2, 0);
-  cn->camera.direction = make_float3(0, 0, -1);
-  cn->camera.crossed   = make_float3(1, 0, 0);
+  cn->camera.up      = make_float3(0, 1, 0);
+  cn->camera.origin  = make_float3(0, 0, -2);
+  cn->camera.crossed = make_float3(1, 0, 0);
 
   int objectIdx            = 0;
   cn->objects[objectIdx++] = objectCreate(0, 0, make_float3(0, 0, 1));

@@ -3,10 +3,10 @@ NVCC         = $(CUDA_HOME)/bin/nvcc
 INCLUDE_DIRS = -I$(CUDA_HOME)/include -I$(CUDA_HOME)/sdk/CUDALibraries/common/inc -I include -I src -I$(CUDA_HOME)/sdk/CUDALibraries/common/lib -I/opt/cuda/include -Iinclude
 
 NVCC_FLAGS_LOCAL = -O3 $(INCLUDE_DIRS)
-NVCC_FLAGS  		 = -O3 -Wno-deprecated-gpu-targets -gencode arch=compute_86,code=sm_86 --ptxas-options=-v $(INCLUDE_DIRS) -fopenmp -fPIE
-LD_FLAGS    		 = -lcudart -Xlinker -rpath,$(CUDA_HOME)/lib64 $(INCLUDE_DIRS) -fPIE
+NVCC_FLAGS  		 = -O3 -Wno-deprecated-gpu-targets -gencode arch=compute_86,code=sm_86 --ptxas-options=-v $(INCLUDE_DIRS) -Xcompiler -fPIC
+LD_FLAGS    		 = -lcudart -Xlinker -rpath,$(CUDA_HOME)/lib64 $(INCLUDE_DIRS) -fPIC
 
-GCC_FLAGS   = -O3 $(INCLUDE_DIRS) -fopenmp -fPIE
+GCC_FLAGS   = -O3 $(INCLUDE_DIRS) -fPIC
 
 BIN = bin
 ODIR = obj
@@ -26,11 +26,11 @@ all : $(OUT) $(ODIR) $(BIN)
 
 $(ODIR)/%.o : $(IDIR)/%.cu
 	mkdir -p obj
-	$(NVCC) $(NVCC_FLAGS_LOCAL) -c $^ -o $@
+	$(NVCC) $(NVCC_FLAGS) -c $^ -o $@
 
 $(ODIR)/%.o : $(IDIR)/**/%.cu
 	mkdir -p obj
-	$(NVCC) $(NVCC_FLAGS_LOCAL) -c $^ -o $@
+	$(NVCC) $(NVCC_FLAGS) -c $^ -o $@
 
 $(ODIR)/%.o : $(IDIR)/%.c
 	mkdir -p obj
@@ -49,7 +49,7 @@ clean: $(ODIR) $(BIN)
 	rm -rf $(BIN)
 	rm -rf $(SDIR)
 	rm -rf results
-	rm -rf *.out *.qdrep *.sqlite
+	rm -rf *.out *.qdrep *.sqlite submit*
 
 $(ODIR):
 	mkdir -p $(ODIR)
