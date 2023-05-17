@@ -104,6 +104,8 @@ HEAD int sdfHitPlane(float3 ro, float3 rd, float* delta) {
 HEAD float lRandom(int magic) { return fracf(float(magic) * 0.0001) * 2.0f - 1.0f; }
 
 HEAD float3 lRandomDirection(int magic) { return lNormalize(make_float3(lRandom(magic), lRandom(magic * 43), lRandom(magic * 51))); }
+
+/* Samples a textures using normalized UV coordinates (only sRGB three channel 24 bit) */
 HEAD float3 sampleTexture(Texture* text, float2 uv) {
   uv                 = fracf(uv);
   unsigned char* rgb = (unsigned char*)text->data;
@@ -114,6 +116,7 @@ HEAD float3 sampleTexture(Texture* text, float2 uv) {
   return make_float3(rgb[i] / float(255.0f), rgb[i + 1] / float(255.0f), rgb[i + 2] / float(255.0f));
 }
 
+/* This function samples a texture using spherical coordinates */
 HEAD float3 sampleEnvMap(Texture* text, float3 rd) {
   float  x      = 1.5 * atan2(rd.z, rd.x) / (2 * M_PI);
   float  y      = 0.5 + 2.0 * atan2(rd.y, sqrt(rd.x * rd.x + rd.z * rd.z)) / (2 * M_PI);
