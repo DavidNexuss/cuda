@@ -10,7 +10,7 @@
 #SBATCH --gres=gpu:1
 
 export PATH=/Soft/cuda/11.2.1/bin:$PATH
-RUN=./run.sh
+RUN=./runBoada.sh
 
 $RUN scripts/test1.c scripts/runFrame.c
 $RUN scripts/testSphere.c scripts/runFrame.c
