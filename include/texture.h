@@ -1,6 +1,8 @@
 #pragma once
 #include "util/buffer.h"
 
+
+/* Texture definiton struct self explanatory */
 typedef struct
 {
   int   width;

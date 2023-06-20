@@ -2,6 +2,7 @@
 #include "texture.h"
 #include "util/buffer.h"
 #include <stb/stb_image_write.h>
+#include <stdio.h>
 
 Scene sceneCreate(SceneDesc desc) {
   Scene scene;
@@ -36,6 +37,9 @@ Scene sceneCreate(SceneDesc desc) {
 
   for (int i = 0; i < desc.maxTextures; i++) scene.texturesData[i] = 0;
 
+  if (desc.fWriteClamped) {
+    dprintf(2, "WARNING clampedWrited activated: Normalizing framebuffer output without gamma correction, for a better result use the HDR version\n");
+  }
   return scene;
 }
 

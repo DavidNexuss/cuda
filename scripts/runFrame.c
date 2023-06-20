@@ -26,11 +26,11 @@ void traceInit(Scene* scene);
 void traceLoop(PushConstants* cn);
 int  main(int argc, char** argv) {
   SceneDesc sceneDesc           = defaultDesc();
-  sceneDesc.frameBufferWidth    = 1280 * 2;
-  sceneDesc.frameBufferHeight   = 720 * 2;
+  sceneDesc.frameBufferWidth    = 1280;
+  sceneDesc.frameBufferHeight   = 720;
   sceneDesc.framesInFlight      = 1;
-  sceneDesc.fWriteClamped       = 0;
-  sceneDesc.iterationsPerThread = 64;
+  sceneDesc.fWriteClamped       = 1;
+  sceneDesc.iterationsPerThread = 32;
   sceneDesc.numThreads          = 32;
   sceneRunSuite(sceneDesc, testname, traceInit, traceLoop, 0);
   bufferDebugStats();

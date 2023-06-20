@@ -28,7 +28,7 @@ void traceInit(Scene* scene) {
     0.1,
     1.01);
   inp.materials[1].diffuseTexture = 0;
-  inp.materials[1].emissionFactor = 50;
+  inp.materials[1].emissionFactor = 2;
 
   inp.textures[textureIdx++] = textureCreate("assets/checker.png");
   inp.textures[textureIdx++] = textureCreate("assets/equi2.png");

@@ -125,6 +125,12 @@ HEAD float3 sampleEnvMap(Texture* text, float3 rd) {
 }
 #define FLT_MAX 3.402823466e+38F /* max value */
 HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxDepth, SceneInput input, int x, int y, int frame, int magic) {
+
+  //First thing to do is to resolve initial ray origin and directions.
+  // Ray origin is camera origin
+  // Ray direction is (uv, 1) + magic. Where uv is 2d vec of screen coordinates, this will hopefully map to a 90 degree fov perspective camera. See perspective projection
+  // glm documentation for this
+
   float  ra = float(width) / float(height);
   float2 uv = make_float2((2 * x / float(width)) - 1, (2 * (height - y) / float(height)) - 1);
   uv.x *= ra;
@@ -135,20 +141,34 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 
   float3 rd = make_float3(uv.x, uv.y, 1);
   float3 ro = constants->camera.origin;
-  //DOF
+
+  //Compute Depth of Field by adding a random offset to direction
   magic = lHash(magic);
   rd.x  = rd.x + lRandom(lHash(magic)) * 0.002;
   rd.y  = rd.y + lRandom(lHash(magic + 71)) * 0.002;
   rd.z  = rd.z + lRandom(lHash(magic + 45)) * 0.002;
 
+  // Project camera direction to computed direction
   float3 rdProjected = make_float3(
     constants->camera.crossed.x * rd.x + constants->camera.up.x * rd.y + constants->camera.direction.x * rd.z,
     constants->camera.crossed.y * rd.x + constants->camera.up.y * rd.y + constants->camera.direction.y * rd.z,
     constants->camera.crossed.z * rd.x + constants->camera.up.z * rd.y + constants->camera.direction.z * rd.z);
 
-  rd = lNormalize(rdProjected);
-
+  rd                  = lNormalize(rdProjected);
   float3 currentColor = make_float3(1, 1, 1);
+
+  //Execute the path tracing algorithm
+  // Color wise (energy wise)
+  // Color will be deduced from a multiplicative approach.
+  //Each ray has a color (its enery), when a ray hits a surface part of its energy has to be absorved (when hitting a material), or given (when hitting an emissive surface)
+  // sky for instance.
+
+  //This siulation of light is very heavy approximation on light assuming a lot of things of materials, but seems to give
+  //a nice result and it is quite accurate for the human eye. See BRDF PBR model for a realistic approach
+
+  // Direction wise
+  // Since we are not considering reality here, when a ray hits a surface and it is reflected we should consider Roughness and Metallic parameters in a realistic pipelines,
+  // Here we are doing a mix of both properties. See documentation for a better explanation of what this is and why it seems to work nicely
   for (int d = 0; d < maxDepth; d++) {
     float3 hitNormal;
     float  delta           = FLT_MAX;
@@ -159,6 +179,8 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
       float3  partialNormal;
       int     hitStatus = 0;
       Mesh*   mesh      = &meshes[obj->mesh];
+
+      //For each ray intersect the scene and search for closest surface
       switch (mesh->type) {
         case PLAIN:
           partialNormal = mesh->tPlain.normal;
@@ -183,11 +205,13 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
       }
     }
 
+    //If not surface is found, we are done, and skip
     if (collisionObject == -1) {
       break;
     }
 
 
+    //if not compute reflection if needed
     float fresnel = abs(dot(rd, hitNormal));
 
     float3 nro = lAdvance(ro, rd, delta);
@@ -232,16 +256,20 @@ HEAD float3 pathTracing(int width, int height, int iterationsPerThread, int maxD
 }
 
 
+/* Execution entry point*/
 __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int iterationsPerThread, int maxDepth, SceneInput input, int magic) {
 
   int    pixelIdx = (blockIdx.y * width + blockIdx.x) * 3;
   float* fbo      = &fbo_mat[blockIdx.z * width * height * 3];
 
+  // For each thread execute iterationsPerThread times the tracing algorithm, each time with a different magic number, store result in shared array
   extern __shared__ float3 sharedResults[];
 
-  float3 partial  = make_float3(0, 0, 0);
-  int    tidMagic = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread + magic;
+  //Magic seed for each thread
+  int tidMagic = ((blockIdx.x * gridDim.y + blockIdx.y) * blockDim.x + threadIdx.x) * iterationsPerThread + magic;
 
+  // Execute path tracing
+  float3 partial = make_float3(0, 0, 0);
   for (int i = 0; i < iterationsPerThread; i++) {
     float3 partialResult = pathTracing(width, height, iterationsPerThread, maxDepth, input, blockIdx.x, blockIdx.y, blockIdx.z, tidMagic + i);
     partial.x += partialResult.x;
@@ -249,7 +277,9 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
     partial.z += partialResult.z;
   }
 
-  int tid            = threadIdx.x;
+  int tid = threadIdx.x;
+
+  // Tree sum reduction
   sharedResults[tid] = make_float3(partial.x / iterationsPerThread, partial.y / iterationsPerThread, partial.z / iterationsPerThread);
   __syncthreads();
 
@@ -264,6 +294,7 @@ __global__ void pathTracingKernel(int width, int height, float* fbo_mat, int ite
     __syncthreads();
   }
 
+  // Write result to FBO
   if (threadIdx.x == 0) {
     if (input.constants->clear) {
       fbo[pixelIdx]     = (sharedResults[0].x / blockDim.x);
