@@ -24,6 +24,7 @@ static SceneDesc   defaultDesc() {
 
 void traceInit(Scene* scene);
 void traceLoop(PushConstants* cn);
+
 int  main(int argc, char** argv) {
   SceneDesc sceneDesc           = defaultDesc();
   sceneDesc.frameBufferWidth    = 1280;

@@ -10,7 +10,13 @@
 #SBATCH --gres=gpu:1
 
 export PATH=/Soft/cuda/11.2.1/bin:$PATH
-./runBoada.sh scripts/test1.c scripts/runFrame.c
-./runBoada.sh scripts/testSphere.c scripts/runFrame.c
-./runBoada.sh scripts/test1.c scripts/runFrames.c
-# ./runBoada.sh scripts/test3.c scripts/runFrame.c
+RUN=./run.sh
+
+$RUN scripts/test1.c scripts/runFrame.c
+$RUN scripts/testSphere.c scripts/runFrame.c
+$RUN scripts/test3.c scripts/runFrame.c
+$RUN scripts/test4.c scripts/runFrame.c
+
+echo "Run movie generation test (may take several minutes)"
+read trash
+$RUN scripts/test1.c scripts/runFrames.c

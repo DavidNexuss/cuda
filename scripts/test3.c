@@ -1,5 +1,7 @@
 #include <scene.h>
 
+const char* testname = "results/test3.png";
+
 void traceInit(Scene* scene) {
   SceneInput inp = sceneInputHost(scene);
 
